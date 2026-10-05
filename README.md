@@ -33,3 +33,11 @@ The Control Passcode is required by Mazda for cloud vehicle controls. Bluetooth 
 5. Enter the Mazda account credentials and the same six-digit Control Passcode.
 
 Reconfiguration signs in again and registers the control key required for signed cloud commands. The passcode is stored in the Home Assistant config entry as an integration credential. It is encrypted before being sent to Mazda and is never exposed as a code field on the lock entity.
+
+# Charging controls
+
+- **Charge limit** (number, 60–100 %) is created whenever the vehicle reports a target state of charge, even if Mazda's function list does not advertise it.
+- **Charge schedules** (sensor) shows the number of charging schedules, with each schedule's start, end and active state as attributes.
+- **Charge schedule start**, **Charge schedule end** (time) and **Charge schedule** (switch) edit the first schedule. Create the schedule in the Mazda app first; these controls stay unavailable until one exists. Times are sent with Home Assistant's current UTC offset.
+
+All charging controls require the control key registered through **Reconfigure**, but not the Control Passcode.
