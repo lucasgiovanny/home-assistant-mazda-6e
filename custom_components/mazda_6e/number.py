@@ -35,8 +35,8 @@ async def async_setup_entry(
     async_add_entities(
         Mazda6eChargeLimit(coordinator, item["vehicle"])
         for item in coordinator.data.values()
+        # Some vehicles report maxSocPercent without advertising BatteryMaxSoc in confList.
         if (item.get("status") or {}).get("charge", {}).get("maxSocPercent") is not None
-        and item["vehicle"].supports("BatteryMaxSoc")
     )
 
 

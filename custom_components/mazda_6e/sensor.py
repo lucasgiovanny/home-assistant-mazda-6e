@@ -28,6 +28,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .const import DOMAIN
 from .entity import Mazda6eEntity
 from .entity_deduplication import control_replaces_read_only_entity
+from .helpers.charge_plan import charge_plans, describe_plan
 from .helpers.validators import remaining_charge_time, speed_value, temperature, timestamp_ms
 from .models import Mazda6eVehicle, ChargeStatus, PowerStatus, SeatStatusMode, VehicleStatus
 
@@ -159,6 +160,13 @@ SENSOR_TYPES: tuple[Mazda6eSensorDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data["status"]["charge"]["maxSocPercent"],
+    ),
+    Mazda6eSensorDescription(
+        key="charge_plans",
+        translation_key="charge_plans",
+        icon="mdi:calendar-clock",
+        value_fn=lambda data: len(charge_plans(data)),
+        attrs_fn=lambda data: {"plans": [describe_plan(plan) for plan in charge_plans(data)]},
     ),
     Mazda6eSensorDescription(
         key="remainChargeTime",

@@ -16,8 +16,10 @@ def control_replaces_read_only_entity(
         return False
 
     entity = (platform, key)
+    if entity == ("sensor", "charge_target_soc"):
+        return True
+
     required_function = {
-        ("sensor", "charge_target_soc"): "BatteryMaxSoc",
         ("binary_sensor", "air_conditioning"): "ACSW",
         ("binary_sensor", "defrost"): "ACFrontDefrosterSW",
         ("binary_sensor", "steering_wheel_heater"): "SteeringWheelSW",

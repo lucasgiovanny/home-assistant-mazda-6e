@@ -195,6 +195,9 @@
       "charge_current": {
         "name": "Charging current"
       },
+      "charge_plans": {
+        "name": "Charge schedules"
+      },
       "charge_status": {
         "name": "Charge status",
         "state": {
@@ -314,6 +317,9 @@
       "battery_preheating": {
         "name": "Battery preheating"
       },
+      "charge_schedule": {
+        "name": "Charge schedule"
+      },
       "front_defrost": {
         "name": "Front defrost"
       },
@@ -324,6 +330,12 @@
     "time": {
       "battery_preheating_departure_time": {
         "name": "Battery preheating departure time"
+      },
+      "charge_schedule_end": {
+        "name": "Charge schedule end"
+      },
+      "charge_schedule_start": {
+        "name": "Charge schedule start"
       }
     }
   }

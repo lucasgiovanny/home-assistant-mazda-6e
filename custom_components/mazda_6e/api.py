@@ -439,6 +439,71 @@ class Mazda6EApi:
 
     async def _async_set_charge_limit_once(self, vehicle_id: int, charge_limit: int):
         """Submit one charge-limit command and wait for its result."""
+        return await self._async_charge_command(
+            vehicle_id,
+            "percentage",
+            {"chargePercentageMax": charge_limit, "command": "charge_max"},
+        )
+
+    async def async_add_charge_plan(
+        self, vehicle_id: int, start_time: str, end_time: str, *, end_enabled: bool, time_zone: str,
+    ) -> dict:
+        """Create a charging schedule plan."""
+        return await self._async_charge_command(
+            vehicle_id,
+            "add-plan",
+            {
+                "command": "add_charge_plan",
+                "endSwitch": int(end_enabled),
+                "endTime": end_time,
+                "planType": 1,
+                "startTime": start_time,
+                "timeFormat": 1,
+                "timeZone": time_zone,
+            },
+        )
+
+    async def async_modify_charge_plan(
+        self,
+        vehicle_id: int,
+        plan: dict,
+        start_time: str,
+        end_time: str,
+        *,
+        end_enabled: bool,
+        time_zone: str,
+    ) -> dict:
+        """Change the start and end time of an existing charging schedule plan."""
+        return await self._async_charge_command(
+            vehicle_id,
+            "modify-plan",
+            {
+                "command": "modify-plan",
+                "endSwitch": int(end_enabled),
+                "endTime": end_time,
+                "planId": str(plan["planId"]),
+                "planType": plan.get("planType", 1),
+                "startTime": start_time,
+                "timeFormat": plan.get("timeFormat", 1),
+                "timeZone": time_zone,
+            },
+        )
+
+    async def async_set_charge_plan_enabled(
+        self, vehicle_id: int, plan_id: int | str, enabled: bool,
+    ) -> dict:
+        """Activate or deactivate a charging schedule plan."""
+        return await self._async_charge_command(
+            vehicle_id,
+            "validity",
+            {"command": "COMMAND_VALID_CHARGE_PLAN", "enabled": enabled, "planId": str(plan_id)},
+        )
+
+    async def _async_charge_command(self, vehicle_id: int, route: str, command_payload: dict) -> dict:
+        """Submit and poll a signed charge-settings command."""
+        if not self.control_private_key:
+            raise ConfigEntryAuthFailed("Sign in again to register a control key")
+
         headers = {**HEADERS_BASE, "authorization": self.token, "deviceid": self.deviceid}
         serial_response = await self._request(
             f"{base_url(self.region)}/cma-app-car-control/api/serial-no/get",
@@ -450,14 +515,13 @@ class Mazda6EApi:
             raise ValueError("Serial response omitted data")
 
         payload = {
-            "chargePercentageMax": charge_limit,
-            "command": "charge_max",
+            **command_payload,
             "rcToken": "",
             "seriralNo": decrypt_control_serial(encrypted_serial, self.control_private_key),
             "vehicleId": str(vehicle_id),
         }
         submitted = await self._request(
-            f"{base_url(self.region)}/cma-app-car-control/api/charge/percentage",
+            f"{base_url(self.region)}/cma-app-car-control/api/charge/{route}",
             headers,
             {
                 **payload,
@@ -470,7 +534,7 @@ class Mazda6EApi:
         )
         submitted_data = submitted.get("data")
         if not isinstance(submitted_data, dict) or not isinstance(submitted_data.get("commandId"), str):
-            raise ValueError("Charge-limit response omitted commandId")
+            raise ValueError(f"Charge {route} response omitted commandId")
 
         return await self._async_wait_for_control_result(
             headers,

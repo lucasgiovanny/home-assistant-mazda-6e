@@ -10,11 +10,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import DOMAIN
+from .const import CONF_CONTROL_PIN, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-TO_REDACT_CONFIG = [CONF_EMAIL, CONF_PASSWORD, 'email_enc', 'refresh', 'token', 'deviceid']
+TO_REDACT_CONFIG = [
+    CONF_EMAIL, CONF_PASSWORD, CONF_CONTROL_PIN, 'email_enc', 'refresh', 'token', 'deviceid',
+    'control_private_key', 'control_public_key',
+]
 TO_REDACT_DATA = ["vin", "vehicle_id", "token", "access_token", "refresh_token", "session_id"]
 
 

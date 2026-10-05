@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .api import MazdaApiError
 from .const import DOMAIN
 from .entity import Mazda6eEntity
+from .helpers.charge_plan import charge_plans, first_charge_plan
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -50,6 +51,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             entities.append(Mazda6eControlSwitch(coordinator, vehicle, SWITCHES[1]))
         if item.get("battery_preheating_plan") is not None:
             entities.append(Mazda6eBatteryPreheatingSwitch(coordinator, vehicle))
+        if charge_plans(item) is not None:
+            entities.append(Mazda6eChargeScheduleSwitch(coordinator, vehicle))
     async_add_entities(entities)
 
 
@@ -152,3 +155,53 @@ class Mazda6eBatteryPreheatingSwitch(Mazda6eEntity, SwitchEntity):
         if plan is None:
             raise HomeAssistantError("Mazda did not return a battery-preheating plan")
         return plan
+
+
+CHARGE_SCHEDULE_DESCRIPTION = SwitchEntityDescription(
+    key="charge_schedule",
+    translation_key="charge_schedule",
+    icon="mdi:calendar-clock",
+    entity_category=EntityCategory.CONFIG,
+)
+
+
+class Mazda6eChargeScheduleSwitch(Mazda6eEntity, SwitchEntity):
+    """Activate or deactivate the first charging schedule plan."""
+
+    def __init__(self, coordinator, vehicle) -> None:
+        super().__init__(coordinator, vehicle, CHARGE_SCHEDULE_DESCRIPTION)
+
+    @property
+    def is_on(self) -> bool | None:
+        plan = first_charge_plan(self.vehicle_data)
+        if plan is None or type(plan.get("isValid")) is not int:
+            return None
+        return plan["isValid"] == 1
+
+    @property
+    def available(self) -> bool:
+        return (
+            super().available
+            and bool(self.coordinator.api.control_private_key)
+            and first_charge_plan(self.vehicle_data) is not None
+        )
+
+    async def async_turn_on(self, **kwargs) -> None:
+        await self._async_set_enabled(True)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        await self._async_set_enabled(False)
+
+    async def _async_set_enabled(self, enabled: bool) -> None:
+        plan = first_charge_plan(self.vehicle_data)
+        if plan is None:
+            raise HomeAssistantError("Create a charging schedule in the Mazda app first")
+        try:
+            await self.coordinator.api.async_set_charge_plan_enabled(
+                self.vehicle.vehicle_id,
+                plan["planId"],
+                enabled,
+            )
+        except (KeyError, MazdaApiError, RuntimeError, TimeoutError, ValueError) as err:
+            raise HomeAssistantError(f"Mazda rejected the {self.name} command: {err}") from err
+        await self.coordinator.async_refresh_until(lambda: self.is_on is enabled)

@@ -37,6 +37,7 @@ def is_replaced(
 def test_exact_duplicates_are_replaced_by_supported_controls():
     """Controls replace the five read-only entities backed by the same fields."""
     assert is_replaced("sensor", "charge_target_soc", {"BatteryMaxSoc"})
+    assert is_replaced("sensor", "charge_target_soc", {"#chargeSet"})
     assert is_replaced("binary_sensor", "air_conditioning", {"ACSW"})
     assert is_replaced("binary_sensor", "defrost", {"ACFrontDefrosterSW"})
     assert is_replaced(

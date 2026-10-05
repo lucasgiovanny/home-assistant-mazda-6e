@@ -200,3 +200,79 @@ def test_battery_preheating_commands_use_observed_contract(
         hashes.SHA256(),
     )
     assert calls[2].args[2] == {"commandId": "command-id", "vehicleId": "123"}
+
+
+@pytest.mark.parametrize(
+    ("method", "args", "kwargs", "route", "expected_payload", "signed_data"),
+    [
+        (
+            "async_add_charge_plan",
+            (123, "1100", "1500"),
+            {"end_enabled": True, "time_zone": "GMT+01:00"},
+            "/charge/add-plan",
+            {
+                "command": "add_charge_plan",
+                "endSwitch": 1,
+                "endTime": "1500",
+                "planType": 1,
+                "startTime": "1100",
+                "timeFormat": 1,
+                "timeZone": "GMT+01:00",
+            },
+            b"endSwitch=1&endTime=1500&planType=1&seriralNo=serial&startTime=1100"
+            b"&timeFormat=1&timeZone=GMT+01:00&vehicleId=123",
+        ),
+        (
+            "async_modify_charge_plan",
+            (123, {"planId": 42, "planType": 1, "timeFormat": 1}, "1100", "1500"),
+            {"end_enabled": False, "time_zone": "GMT+00:00"},
+            "/charge/modify-plan",
+            {
+                "command": "modify-plan",
+                "endSwitch": 0,
+                "endTime": "1500",
+                "planId": "42",
+                "planType": 1,
+                "startTime": "1100",
+                "timeFormat": 1,
+                "timeZone": "GMT+00:00",
+            },
+            b"endSwitch=0&endTime=1500&planId=42&planType=1&seriralNo=serial"
+            b"&startTime=1100&timeFormat=1&timeZone=GMT+00:00&vehicleId=123",
+        ),
+        (
+            "async_set_charge_plan_enabled",
+            (123, 42, False),
+            {},
+            "/charge/validity",
+            {"command": "COMMAND_VALID_CHARGE_PLAN", "enabled": False, "planId": "42"},
+            b"enabled=false&planId=42&seriralNo=serial&vehicleId=123",
+        ),
+    ],
+)
+def test_charge_plan_commands_use_charge_contract(
+    api_context, method, args, kwargs, route, expected_payload, signed_data,
+):
+    """Charge plans use serial type 2 and omit command and rcToken from the signature."""
+    api, key, encrypted_serial = make_api(*api_context)
+    api._request = AsyncMock(side_effect=[
+        {"data": encrypted_serial},
+        {"data": {"commandId": "command-id"}},
+        {"data": {"resultCode": 0, "errorMsg": "success"}},
+    ])
+
+    result = asyncio.run(getattr(api, method)(*args, **kwargs))
+
+    assert result["resultCode"] == 0
+    calls = api._request.await_args_list
+    assert calls[0].args[2] == {"type": "2"}
+    assert calls[1].args[0].endswith(route)
+    payload = calls[1].args[2]
+    signature = payload.pop("sign")
+    assert payload == {
+        **expected_payload,
+        "rcToken": "",
+        "seriralNo": "serial",
+        "vehicleId": "123",
+    }
+    key.verify(base64.b64decode(signature), signed_data, padding.PKCS1v15(), hashes.SHA256())
