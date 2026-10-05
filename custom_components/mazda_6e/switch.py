@@ -49,7 +49,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             entities.append(Mazda6eControlSwitch(coordinator, vehicle, SWITCHES[0]))
         if "vehicleStatus" in status and vehicle.supports("SteeringWheelSW"):
             entities.append(Mazda6eControlSwitch(coordinator, vehicle, SWITCHES[1]))
-        if item.get("battery_preheating_plan") is not None:
+        if item.get("heating_plans") is not None:
             entities.append(Mazda6eBatteryPreheatingSwitch(coordinator, vehicle))
         if charge_plans(item) is not None:
             entities.append(Mazda6eChargeScheduleSwitch(coordinator, vehicle))

@@ -171,6 +171,35 @@ def test_get_battery_preheating_plan_uses_observed_contract(api_context):
             },
             b"enabled=false&planId=7&seriralNo=serial&vehicleId=123",
         ),
+        (
+            "async_add_battery_preheating",
+            (123, "20261006073000"),
+            "/heating-plans/add-plan",
+            "5",
+            {
+                "endData": "20261006073000",
+                "planType": 0,
+                "command": "COMMAND_HEATING_PLANS_ADD",
+                "rcToken": "",
+                "seriralNo": "serial",
+                "vehicleId": "123",
+            },
+            b"endData=20261006073000&planType=0&seriralNo=serial&vehicleId=123",
+        ),
+        (
+            "async_delete_battery_preheating",
+            (123, 7),
+            "/heating-plans/delete-plan",
+            "5",
+            {
+                "planId": "7",
+                "command": "COMMAND_HEATING_PLANS_DELETE",
+                "rcToken": "",
+                "seriralNo": "serial",
+                "vehicleId": "123",
+            },
+            b"planId=7&seriralNo=serial&vehicleId=123",
+        ),
     ],
 )
 def test_battery_preheating_commands_use_observed_contract(
@@ -241,6 +270,14 @@ def test_battery_preheating_commands_use_observed_contract(
             b"&startTime=1100&timeFormat=1&timeZone=GMT+00:00&vehicleId=123",
         ),
         (
+            "async_delete_charge_plan",
+            (123, 42),
+            {},
+            "/charge/delete-plan",
+            {"command": "delete_charge_plan", "planId": "42"},
+            b"planId=42&seriralNo=serial&vehicleId=123",
+        ),
+        (
             "async_set_charge_plan_enabled",
             (123, 42, False),
             {},
@@ -276,3 +313,29 @@ def test_charge_plan_commands_use_charge_contract(
         "vehicleId": "123",
     }
     key.verify(base64.b64decode(signature), signed_data, padding.PKCS1v15(), hashes.SHA256())
+
+
+def test_status_update_request_signs_without_command(api_context):
+    """condition-inquiry uses serial type 1 and leaves command out of the signature."""
+    api, key, encrypted_serial = make_api(*api_context)
+    api._request = AsyncMock(side_effect=[
+        {"data": encrypted_serial},
+        {"data": {"commandId": "command-id"}},
+        {"data": {"resultCode": 0, "errorMsg": "success"}},
+    ])
+
+    asyncio.run(api.async_request_status_update(123))
+
+    calls = api._request.await_args_list
+    assert calls[0].args[2] == {"type": "1"}
+    assert calls[1].args[0].endswith("/control/condition-inquiry")
+    payload = calls[1].args[2]
+    signature = payload.pop("sign")
+    assert payload == {"command": "COMMAND_GET_NEW_CONDITION", "seriralNo": "serial", "vehicleId": "123"}
+    key.verify(base64.b64decode(signature), b"seriralNo=serial&vehicleId=123", padding.PKCS1v15(), hashes.SHA256())
+
+
+def test_battery_preheating_plan_is_selected_from_heating_plans(api_context):
+    api_module = api_context[0]
+    assert api_module.battery_preheating_plan([{"planId": 8, "planType": 1}]) is None
+    assert api_module.battery_preheating_plan([{"planId": 7, "planType": 0}]) == {"planId": 7, "planType": 0}

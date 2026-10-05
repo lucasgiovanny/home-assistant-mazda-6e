@@ -23,6 +23,11 @@ HEADERS_BASE = {
 }
 
 
+def battery_preheating_plan(plans: list[dict]) -> dict | None:
+    """Return the battery-preheating plan (planType 0) from the heating plans."""
+    return next((plan for plan in plans if plan.get("planType") == 0), None)
+
+
 class MazdaLoginError(Exception):
     """Mazda rejected an email and password login request."""
 
@@ -243,8 +248,8 @@ class Mazda6EApi:
         raw = await self._request(url, headers, body)
         return raw.get("data")
 
-    async def async_get_battery_preheating_plan(self, vehicle_id: int) -> dict | None:
-        """Return the captured battery-preheating plan for a vehicle."""
+    async def async_get_heating_plans(self, vehicle_id: int) -> list[dict]:
+        """Return the captured heating plans for a vehicle."""
         headers = {
             **HEADERS_BASE,
             "authorization": self.token,
@@ -258,9 +263,19 @@ class Mazda6EApi:
         plans = raw.get("data")
         if not isinstance(plans, list):
             raise ValueError("Battery-preheating response omitted plan list")
-        return next(
-            (plan for plan in plans if isinstance(plan, dict) and plan.get("planType") == 0),
-            None,
+        return [plan for plan in plans if isinstance(plan, dict)]
+
+    async def async_get_battery_preheating_plan(self, vehicle_id: int) -> dict | None:
+        """Return the captured battery-preheating plan for a vehicle."""
+        return battery_preheating_plan(await self.async_get_heating_plans(vehicle_id))
+
+    async def async_request_status_update(self, vehicle_id: int):
+        """Ask the vehicle to upload fresh condition data."""
+        return await self._async_signed_control(
+            vehicle_id,
+            "condition-inquiry",
+            {"command": "COMMAND_GET_NEW_CONDITION"},
+            sign_omit_keys={"command", "rcToken"},
         )
 
     async def async_unlock(self, vehicle_id: int):
@@ -387,6 +402,24 @@ class Mazda6EApi:
             {"enabled": False, "planId": str(plan_id)},
         )
 
+    async def async_add_battery_preheating(self, vehicle_id: int, end_data: str) -> dict:
+        """Create a battery-preheating plan; route inferred from the update-plan naming."""
+        return await self._async_battery_preheating_command(
+            vehicle_id,
+            "add-plan",
+            "COMMAND_HEATING_PLANS_ADD",
+            {"endData": end_data, "planType": 0},
+        )
+
+    async def async_delete_battery_preheating(self, vehicle_id: int, plan_id: int | str) -> dict:
+        """Delete a battery-preheating plan; route inferred from the update-plan naming."""
+        return await self._async_battery_preheating_command(
+            vehicle_id,
+            "delete-plan",
+            "COMMAND_HEATING_PLANS_DELETE",
+            {"planId": str(plan_id)},
+        )
+
     async def _async_battery_preheating_command(
         self,
         vehicle_id: int,
@@ -499,6 +532,14 @@ class Mazda6EApi:
             {"command": "COMMAND_VALID_CHARGE_PLAN", "enabled": enabled, "planId": str(plan_id)},
         )
 
+    async def async_delete_charge_plan(self, vehicle_id: int, plan_id: int | str) -> dict:
+        """Delete a charging schedule plan."""
+        return await self._async_charge_command(
+            vehicle_id,
+            "delete-plan",
+            {"command": "delete_charge_plan", "planId": str(plan_id)},
+        )
+
     async def _async_charge_command(self, vehicle_id: int, route: str, command_payload: dict) -> dict:
         """Submit and poll a signed charge-settings command."""
         if not self.control_private_key:
@@ -585,7 +626,13 @@ class Mazda6EApi:
         )
 
     async def _async_signed_control(
-            self, vehicle_id: int, control_name: str, payload: dict, *, allow_already_satisfied: bool = False,
+            self,
+            vehicle_id: int,
+            control_name: str,
+            payload: dict,
+            *,
+            allow_already_satisfied: bool = False,
+            sign_omit_keys: set[str] | None = None,
     ):
         """Submit and poll a captured signed Mazda control command."""
         if not self.control_private_key:
@@ -604,7 +651,9 @@ class Mazda6EApi:
             "seriralNo": decrypt_control_serial(encrypted_serial, self.control_private_key),
             "vehicleId": str(vehicle_id),
         }
-        submitted = await self._async_submit_signed_control(headers, control_name, payload)
+        submitted = await self._async_submit_signed_control(
+            headers, control_name, payload, sign_omit_keys=sign_omit_keys,
+        )
         submitted_data = submitted.get("data")
         if not isinstance(submitted_data, dict) or not isinstance(submitted_data.get("commandId"), str):
             raise ValueError(f"{control_name} response omitted commandId")

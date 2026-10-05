@@ -16,6 +16,12 @@ FIND_VEHICLE_DESCRIPTION = ButtonEntityDescription(
     icon="mdi:car-search",
 )
 
+REFRESH_STATUS_DESCRIPTION = ButtonEntityDescription(
+    key="refresh_status",
+    translation_key="refresh_status",
+    icon="mdi:car-connected",
+)
+
 HONK_HORN_DESCRIPTION = ButtonEntityDescription(
     key="honk_horn",
     translation_key="honk_horn",
@@ -28,11 +34,13 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up vehicle find and horn buttons."""
+    """Set up vehicle find, horn and status-refresh buttons."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for item in coordinator.data.values():
         vehicle = item["vehicle"]
+        if item.get("status") is not None:
+            entities.append(Mazda6eRefreshStatusButton(coordinator, vehicle))
         if vehicle.supports("FlashHonk"):
             entities.extend(
                 (
@@ -58,7 +66,7 @@ class Mazda6eFindVehicleButton(Mazda6eEntity, ButtonEntity):
             await self.coordinator.api.async_find_vehicle(self.vehicle.vehicle_id)
         except (MazdaApiError, RuntimeError, TimeoutError) as err:
             raise HomeAssistantError(f"Mazda rejected the Find vehicle command: {err}") from err
-            await self.coordinator.async_refresh()
+        await self.coordinator.async_refresh()
 
 
 class Mazda6eHonkHornButton(Mazda6eEntity, ButtonEntity):
@@ -76,4 +84,27 @@ class Mazda6eHonkHornButton(Mazda6eEntity, ButtonEntity):
             await self.coordinator.api.async_flash_honk(self.vehicle.vehicle_id, action_type=3)
         except (MazdaApiError, RuntimeError, TimeoutError) as err:
             raise HomeAssistantError(f"Mazda rejected the Horn command: {err}") from err
-            await self.coordinator.async_refresh()
+        await self.coordinator.async_refresh()
+
+class Mazda6eRefreshStatusButton(Mazda6eEntity, ButtonEntity):
+    """Ask the vehicle to upload fresh condition data."""
+
+    def __init__(self, coordinator, vehicle) -> None:
+        super().__init__(coordinator, vehicle, REFRESH_STATUS_DESCRIPTION)
+
+    @property
+    def available(self) -> bool:
+        return super().available and bool(self.coordinator.api.control_private_key)
+
+    def _last_updated(self):
+        return ((self.vehicle_data or {}).get("status") or {}).get("lastUpdatedAt")
+
+    async def async_press(self) -> None:
+        previous = self._last_updated()
+        try:
+            await self.coordinator.api.async_request_status_update(self.vehicle.vehicle_id)
+        except (MazdaApiError, RuntimeError, TimeoutError) as err:
+            raise HomeAssistantError(f"Mazda rejected the status refresh command: {err}") from err
+        await self.coordinator.async_refresh_until(
+            lambda: self._last_updated() != previous, attempts=10, interval_seconds=3.0,
+        )

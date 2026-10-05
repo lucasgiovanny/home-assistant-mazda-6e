@@ -146,6 +146,9 @@
       },
       "honk_horn": {
         "name": "Buzinar"
+      },
+      "refresh_status": {
+        "name": "Atualizar status do veículo"
       }
     },
     "climate": {
@@ -336,6 +339,60 @@
       },
       "charge_schedule_start": {
         "name": "Início do agendamento de carregamento"
+      }
+    }
+  },
+  "services": {
+    "create_charge_schedule": {
+      "name": "Criar agendamento de carregamento",
+      "description": "Cria um agendamento de carregamento quando o veículo não tem nenhum.",
+      "fields": {
+        "device_id": {
+          "name": "Veículo",
+          "description": "O veículo Mazda 6e."
+        },
+        "start_time": {
+          "name": "Horário de início",
+          "description": "Horário em que o carregamento começa."
+        },
+        "end_time": {
+          "name": "Horário de término",
+          "description": "Horário opcional em que o carregamento termina."
+        }
+      }
+    },
+    "delete_charge_schedule": {
+      "name": "Excluir agendamento de carregamento",
+      "description": "Exclui o agendamento de carregamento do veículo.",
+      "fields": {
+        "device_id": {
+          "name": "Veículo",
+          "description": "O veículo Mazda 6e."
+        }
+      }
+    },
+    "create_battery_preheating": {
+      "name": "Criar pré-aquecimento da bateria",
+      "description": "Cria um plano de pré-aquecimento da bateria quando o veículo não tem nenhum (experimental).",
+      "fields": {
+        "device_id": {
+          "name": "Veículo",
+          "description": "O veículo Mazda 6e."
+        },
+        "departure_time": {
+          "name": "Horário de saída",
+          "description": "Horário em que a bateria deve estar aquecida."
+        }
+      }
+    },
+    "delete_battery_preheating": {
+      "name": "Excluir pré-aquecimento da bateria",
+      "description": "Exclui o plano de pré-aquecimento da bateria do veículo (experimental).",
+      "fields": {
+        "device_id": {
+          "name": "Veículo",
+          "description": "O veículo Mazda 6e."
+        }
       }
     }
   }
