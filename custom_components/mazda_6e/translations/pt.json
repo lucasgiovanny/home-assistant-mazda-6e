@@ -1,0 +1,342 @@
+{
+  "config": {
+    "abort": {
+      "device_login_failed": "Falha no início de sessão do dispositivo",
+      "reauth_successful": "Autenticação atualizada",
+      "reconfigure_successful": "Credenciais de controlo remoto atualizadas"
+    },
+    "error": {
+      "device_login_failed": "Falha no início de sessão do dispositivo",
+      "invalid_control_pin": "O código de controlo tem de ter seis algarismos",
+      "login_failed": "Falha no início de sessão",
+      "verification_failed": "Código de verificação incorreto"
+    },
+    "step": {
+      "reauth_confirm": {
+        "data": {
+          "email": "Email",
+          "password": "Palavra-passe"
+        },
+        "description": "Inicie sessão novamente com o seu email e palavra-passe.",
+        "title": "Início de sessão Mazda 6e"
+      },
+      "reconfigure": {
+        "data": {
+          "control_pin": "Código de controlo",
+          "email": "Email",
+          "password": "Palavra-passe",
+          "region": "Região"
+        },
+        "data_description": {
+          "control_pin": "O código de seis algarismos usado nos controlos remotos do veículo."
+        },
+        "description": "Introduza as suas credenciais Mazda e o código de controlo remoto.",
+        "title": "Configurar controlos remotos"
+      },
+      "user": {
+        "data": {
+          "control_pin": "Código de controlo (opcional)",
+          "email": "Email",
+          "password": "Palavra-passe",
+          "region": "Região"
+        },
+        "data_description": {
+          "control_pin": "O código de seis algarismos usado nos controlos remotos do veículo. Também pode ser adicionado mais tarde em Reconfigurar."
+        },
+        "description": "Introduza o email e a palavra-passe da sua conta Mazda",
+        "title": "Início de sessão Mazda 6e"
+      },
+      "verify": {
+        "data": {
+          "verification_code": "Código de verificação"
+        },
+        "description": "Introduza o código que recebeu por email.",
+        "title": "Código de verificação"
+      }
+    }
+  },
+  "selector": {
+    "region": {
+      "options": {
+        "asia": "Ásia",
+        "europe": "Europa"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "charge_limit": {
+        "name": "Limite de carregamento"
+      }
+    },
+    "binary_sensor": {
+      "air_conditioning": {
+        "name": "Ar condicionado"
+      },
+      "dc_plugged_in": {
+        "name": "Ligado a carregador DC"
+      },
+      "defrost": {
+        "name": "Desembaciamento"
+      },
+      "driver_lock": {
+        "name": "Fecho da porta do condutor"
+      },
+      "front_left_door": {
+        "name": "Porta do condutor"
+      },
+      "front_left_window": {
+        "name": "Vidro do condutor"
+      },
+      "front_right_door": {
+        "name": "Porta do passageiro"
+      },
+      "front_right_window": {
+        "name": "Vidro do passageiro"
+      },
+      "high_beam": {
+        "name": "Máximos"
+      },
+      "is_charging": {
+        "name": "A carregar"
+      },
+      "left_turn_signal": {
+        "name": "Pisca esquerdo"
+      },
+      "low_beam": {
+        "name": "Médios"
+      },
+      "online": {
+        "name": "Online"
+      },
+      "passenger_lock": {
+        "name": "Fecho da porta do passageiro"
+      },
+      "plugged_in": {
+        "name": "Cabo ligado"
+      },
+      "position_lamp": {
+        "name": "Mínimos"
+      },
+      "rear_left_door": {
+        "name": "Porta traseira esquerda"
+      },
+      "rear_left_window": {
+        "name": "Vidro traseiro esquerdo"
+      },
+      "rear_right_door": {
+        "name": "Porta traseira direita"
+      },
+      "rear_right_window": {
+        "name": "Vidro traseiro direito"
+      },
+      "right_turn_signal": {
+        "name": "Pisca direito"
+      },
+      "steering_wheel_heater": {
+        "name": "Volante aquecido"
+      },
+      "trunk": {
+        "name": "Bagageira"
+      }
+    },
+    "button": {
+      "find_vehicle": {
+        "name": "Localizar veículo"
+      },
+      "honk_horn": {
+        "name": "Buzinar"
+      }
+    },
+    "climate": {
+      "cabin_climate": {
+        "name": "Climatização do habitáculo"
+      }
+    },
+    "cover": {
+      "windows": {
+        "name": "Vidros"
+      }
+    },
+    "device_tracker": {
+      "location": {
+        "name": "Localização"
+      }
+    },
+    "lock": {
+      "doors": {
+        "name": "Portas"
+      },
+      "trunk": {
+        "name": "Bagageira"
+      }
+    },
+    "select": {
+      "driver_seat_heat": {
+        "name": "Aquecimento do banco do condutor"
+      },
+      "driver_seat_ventilation": {
+        "name": "Ventilação do banco do condutor"
+      },
+      "passenger_seat_heat": {
+        "name": "Aquecimento do banco do passageiro"
+      },
+      "passenger_seat_ventilation": {
+        "name": "Ventilação do banco do passageiro"
+      }
+    },
+    "sensor": {
+      "ac_charge_current": {
+        "name": "Corrente de carregamento AC"
+      },
+      "battery_state_of_charge": {
+        "name": "Nível de carga"
+      },
+      "charge_current": {
+        "name": "Corrente de carregamento"
+      },
+      "charge_plans": {
+        "name": "Agendamentos de carregamento"
+      },
+      "charge_status": {
+        "name": "Estado do carregamento",
+        "state": {
+          "charging": "A carregar",
+          "completed": "Concluído",
+          "not_charging": "Sem carregar",
+          "paused": "Em pausa",
+          "unknown": "Desconhecido"
+        }
+      },
+      "charge_target_soc": {
+        "name": "Limite de carregamento"
+      },
+      "dc_charge_current": {
+        "name": "Corrente de carregamento DC"
+      },
+      "front_left_tire_pressure": {
+        "name": "Pressão do pneu dianteiro esquerdo"
+      },
+      "front_right_tire_pressure": {
+        "name": "Pressão do pneu dianteiro direito"
+      },
+      "humidity_inside": {
+        "name": "Humidade"
+      },
+      "last_updated": {
+        "name": "Última atualização"
+      },
+      "odometer": {
+        "name": "Odómetro"
+      },
+      "pm25_inside": {
+        "name": "PM2,5 no habitáculo"
+      },
+      "power_status": {
+        "name": "Estado da ignição",
+        "state": {
+          "accessory": "Acessórios",
+          "off": "Desligado",
+          "on": "Ligado",
+          "unknown": "Desconhecido"
+        }
+      },
+      "rear_left_tire_pressure": {
+        "name": "Pressão do pneu traseiro esquerdo"
+      },
+      "rear_right_tire_pressure": {
+        "name": "Pressão do pneu traseiro direito"
+      },
+      "remain_charge_time": {
+        "name": "Tempo restante de carregamento"
+      },
+      "remaining_driving_range": {
+        "name": "Autonomia"
+      },
+      "seat_status_front_left": {
+        "name": "Estado do banco do condutor",
+        "state": {
+          "fan": "Ventilação",
+          "heating": "Aquecimento",
+          "off": "Desligado",
+          "unknown": "Desconhecido"
+        }
+      },
+      "seat_status_front_right": {
+        "name": "Estado do banco do passageiro",
+        "state": {
+          "fan": "Ventilação",
+          "heating": "Aquecimento",
+          "off": "Desligado",
+          "unknown": "Desconhecido"
+        }
+      },
+      "seat_status_rear_left": {
+        "name": "Estado do banco traseiro esquerdo",
+        "state": {
+          "fan": "Ventilação",
+          "heating": "Aquecimento",
+          "off": "Desligado",
+          "unknown": "Desconhecido"
+        }
+      },
+      "seat_status_rear_right": {
+        "name": "Estado do banco traseiro direito",
+        "state": {
+          "fan": "Ventilação",
+          "heating": "Aquecimento",
+          "off": "Desligado",
+          "unknown": "Desconhecido"
+        }
+      },
+      "speed": {
+        "name": "Velocidade"
+      },
+      "temperature_cockpit": {
+        "name": "Temperatura do posto de condução"
+      },
+      "temperature_inside": {
+        "name": "Temperatura interior"
+      },
+      "temperature_target": {
+        "name": "Temperatura pretendida"
+      },
+      "vehicle_status": {
+        "name": "Estado do veículo",
+        "state": {
+          "driving": "Em andamento",
+          "parked": "Estacionado",
+          "unknown": "Desconhecido"
+        }
+      },
+      "vehicle_status_code": {
+        "name": "Código de estado do veículo"
+      }
+    },
+    "switch": {
+      "battery_preheating": {
+        "name": "Pré-aquecimento da bateria"
+      },
+      "charge_schedule": {
+        "name": "Agendamento de carregamento"
+      },
+      "front_defrost": {
+        "name": "Desembaciamento dianteiro"
+      },
+      "steering_wheel_heat": {
+        "name": "Aquecimento do volante"
+      }
+    },
+    "time": {
+      "battery_preheating_departure_time": {
+        "name": "Hora de partida do pré-aquecimento da bateria"
+      },
+      "charge_schedule_end": {
+        "name": "Fim do agendamento de carregamento"
+      },
+      "charge_schedule_start": {
+        "name": "Início do agendamento de carregamento"
+      }
+    }
+  }
+}
