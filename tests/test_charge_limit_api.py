@@ -207,38 +207,38 @@ def test_battery_preheating_commands_use_observed_contract(
     [
         (
             "async_add_charge_plan",
-            (123, "11:00", "15:00"),
+            (123, "1100", "1500"),
             {"end_enabled": True, "time_zone": "GMT+01:00"},
             "/charge/add-plan",
             {
                 "command": "add_charge_plan",
                 "endSwitch": 1,
-                "endTime": "15:00",
+                "endTime": "1500",
                 "planType": 1,
-                "startTime": "11:00",
+                "startTime": "1100",
                 "timeFormat": 1,
                 "timeZone": "GMT+01:00",
             },
-            b"endSwitch=1&endTime=15:00&planType=1&seriralNo=serial&startTime=11:00"
+            b"endSwitch=1&endTime=1500&planType=1&seriralNo=serial&startTime=1100"
             b"&timeFormat=1&timeZone=GMT+01:00&vehicleId=123",
         ),
         (
             "async_modify_charge_plan",
-            (123, {"planId": 42, "planType": 1, "timeFormat": 1}, "11:00", "15:00"),
+            (123, {"planId": 42, "planType": 1, "timeFormat": 1}, "1100", "1500"),
             {"end_enabled": False, "time_zone": "GMT+00:00"},
             "/charge/modify-plan",
             {
                 "command": "modify-plan",
                 "endSwitch": 0,
-                "endTime": "15:00",
+                "endTime": "1500",
                 "planId": "42",
                 "planType": 1,
-                "startTime": "11:00",
+                "startTime": "1100",
                 "timeFormat": 1,
                 "timeZone": "GMT+00:00",
             },
-            b"endSwitch=0&endTime=15:00&planId=42&planType=1&seriralNo=serial"
-            b"&startTime=11:00&timeFormat=1&timeZone=GMT+00:00&vehicleId=123",
+            b"endSwitch=0&endTime=1500&planId=42&planType=1&seriralNo=serial"
+            b"&startTime=1100&timeFormat=1&timeZone=GMT+00:00&vehicleId=123",
         ),
         (
             "async_set_charge_plan_enabled",
