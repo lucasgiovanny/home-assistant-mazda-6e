@@ -94,3 +94,24 @@ def test_charge_limit_state_availability_and_action(monkeypatch):
 
     api.async_set_charge_limit.assert_awaited_once_with(123, 85)
     coordinator.async_refresh_until.assert_awaited_once()
+
+
+def test_charge_limit_created_without_battery_max_soc_function(monkeypatch):
+    """Vehicles reporting maxSocPercent get the control even if confList omits BatteryMaxSoc."""
+    module = load_number_module(monkeypatch)
+    vehicle = SimpleNamespace(vehicle_id=123, vin="TESTVIN", functions={"#chargeSet"})
+    without_limit = SimpleNamespace(vehicle_id=456, vin="OTHERVIN", functions={"#chargeSet"})
+    coordinator = SimpleNamespace(
+        api=SimpleNamespace(control_private_key="private-key"),
+        data={
+            123: {"vehicle": vehicle, "status": {"charge": {"maxSocPercent": 100}}},
+            456: {"vehicle": without_limit, "status": {"charge": {}}},
+        },
+        last_update_success=True,
+    )
+    hass = SimpleNamespace(data={"mazda_6e": {"entry": coordinator}})
+    added = []
+
+    asyncio.run(module.async_setup_entry(hass, SimpleNamespace(entry_id="entry"), added.extend))
+
+    assert [entity.vehicle for entity in added] == [vehicle]
