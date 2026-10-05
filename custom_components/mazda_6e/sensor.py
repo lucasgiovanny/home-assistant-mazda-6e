@@ -184,7 +184,9 @@ SENSOR_TYPES: tuple[Mazda6eSensorDescription, ...] = (
         icon="mdi:state-machine",
         device_class=SensorDeviceClass.ENUM,
         options=[e.name.lower() for e in ChargeStatus],
-        value_fn=lambda data: ChargeStatus.safe_name(data["status"]["charge"].get("chargeStatus"))
+        value_fn=lambda data: ChargeStatus.safe_name(data["status"]["charge"].get("chargeStatus")),
+        # Codes 1 and 27 were seen while plugged in and idle; their meaning is not known yet.
+        attrs_fn=lambda data: {"status_code": data["status"]["charge"].get("chargeStatus")},
     ),
     *(_seat(position) for position in _SEAT_KEYS),
     Mazda6eSensorDescription(
