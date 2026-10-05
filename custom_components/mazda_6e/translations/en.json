@@ -146,6 +146,9 @@
       },
       "honk_horn": {
         "name": "Honk horn"
+      },
+      "refresh_status": {
+        "name": "Refresh vehicle status"
       }
     },
     "climate": {
@@ -336,6 +339,60 @@
       },
       "charge_schedule_start": {
         "name": "Charge schedule start"
+      }
+    }
+  },
+  "services": {
+    "create_charge_schedule": {
+      "name": "Create charging schedule",
+      "description": "Creates a charging schedule when the vehicle has none.",
+      "fields": {
+        "device_id": {
+          "name": "Vehicle",
+          "description": "The Mazda 6e vehicle."
+        },
+        "start_time": {
+          "name": "Start time",
+          "description": "Time when charging starts."
+        },
+        "end_time": {
+          "name": "End time",
+          "description": "Optional time when charging stops."
+        }
+      }
+    },
+    "delete_charge_schedule": {
+      "name": "Delete charging schedule",
+      "description": "Deletes the vehicle's charging schedule.",
+      "fields": {
+        "device_id": {
+          "name": "Vehicle",
+          "description": "The Mazda 6e vehicle."
+        }
+      }
+    },
+    "create_battery_preheating": {
+      "name": "Create battery preheating",
+      "description": "Creates a battery-preheating plan when the vehicle has none (experimental).",
+      "fields": {
+        "device_id": {
+          "name": "Vehicle",
+          "description": "The Mazda 6e vehicle."
+        },
+        "departure_time": {
+          "name": "Departure time",
+          "description": "Time when the battery should be warm."
+        }
+      }
+    },
+    "delete_battery_preheating": {
+      "name": "Delete battery preheating",
+      "description": "Deletes the vehicle's battery-preheating plan (experimental).",
+      "fields": {
+        "device_id": {
+          "name": "Vehicle",
+          "description": "The Mazda 6e vehicle."
+        }
       }
     }
   }

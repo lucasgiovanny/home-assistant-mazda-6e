@@ -1,25 +1,45 @@
-security_code_status:
-  name: Security code status
-  description: Query the backend status for the vehicle security code.
+create_charge_schedule:
   fields:
-    vehicle_id:
-      name: Vehicle ID
-      description: Optional numeric vehicle ID. If omitted, all configured vehicles are checked.
-      example: 123456
+    device_id:
+      required: true
       selector:
-        number:
-          min: 1
-          mode: box
+        device:
+          integration: mazda_6e
+    start_time:
+      required: true
+      example: "01:00"
+      selector:
+        time:
+    end_time:
+      example: "06:00"
+      selector:
+        time:
 
-validate_security_code:
-  name: Validate encrypted security code
-  description: Validate the stored encrypted security code and fetch backend token data.
+delete_charge_schedule:
   fields:
-    vehicle_id:
-      name: Vehicle ID
-      description: Optional numeric vehicle ID. If omitted, all configured vehicles are checked.
-      example: 123456
+    device_id:
+      required: true
       selector:
-        number:
-          min: 1
-          mode: box
+        device:
+          integration: mazda_6e
+
+create_battery_preheating:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: mazda_6e
+    departure_time:
+      required: true
+      example: "07:30"
+      selector:
+        time:
+
+delete_battery_preheating:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: mazda_6e

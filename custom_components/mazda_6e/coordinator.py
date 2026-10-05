@@ -8,7 +8,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 
 from .const import DOMAIN, UPDATE_INTERVAL
 from .models import Mazda6eVehicle
-from .api import MazdaApiError
+from .api import MazdaApiError, battery_preheating_plan
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -104,12 +104,10 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
         for veh in vehicles:
             veh.functions = await self._async_get_function_config(veh.vehicle_id)
             status_response = await self.api.async_get_vehicle_status(veh.vehicle_id)
-            battery_preheating_plan = None
+            heating_plans = None
             if "#batteryScheduleHeating" in veh.functions:
                 try:
-                    battery_preheating_plan = await self.api.async_get_battery_preheating_plan(
-                        veh.vehicle_id,
-                    )
+                    heating_plans = await self.api.async_get_heating_plans(veh.vehicle_id)
                 except MazdaApiError as err:
                     # Some vehicles advertise battery scheduling but their
                     # regional backend does not support this endpoint.
@@ -127,7 +125,8 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
             vehicle_status[veh.vehicle_id] = {
                 "vehicle": veh,
                 "status": status_response,
-                "battery_preheating_plan": battery_preheating_plan,
+                "heating_plans": heating_plans,
+                "battery_preheating_plan": battery_preheating_plan(heating_plans or []),
             }
 
         _LOGGER.debug("vehicle_status: %s", vehicle_status)

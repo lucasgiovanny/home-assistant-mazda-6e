@@ -54,7 +54,7 @@ async def async_setup_entry(
     entities = []
     for item in coordinator.data.values():
         vehicle = item["vehicle"]
-        if item.get("battery_preheating_plan") is not None:
+        if item.get("heating_plans") is not None:
             entities.append(Mazda6eBatteryPreheatingDepartureTime(coordinator, vehicle))
         if charge_plans(item) is not None:
             entities.append(Mazda6eChargeScheduleTime(coordinator, vehicle, CHARGE_SCHEDULE_START_DESCRIPTION))

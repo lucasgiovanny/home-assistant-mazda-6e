@@ -40,4 +40,16 @@ Reconfiguration signs in again and registers the control key required for signed
 - **Charge schedules** (sensor) shows the number of charging schedules, with each schedule's start, end and active state as attributes.
 - **Charge schedule start**, **Charge schedule end** (time) and **Charge schedule** (switch) edit the first schedule. Create the schedule in the Mazda app first; these controls stay unavailable until one exists. Times are sent with Home Assistant's current UTC offset.
 
+- **Charge status** keeps the raw Mazda code in its `status_code` attribute, since several codes are not mapped yet.
+- **Refresh vehicle status** (button) asks the vehicle to upload fresh data instead of waiting for its next report.
+
 All charging controls require the control key registered through **Reconfigure**, but not the Control Passcode.
+
+# Services
+
+| Service | Fields | Notes |
+|---|---|---|
+| `mazda_6e.create_charge_schedule` | `device_id`, `start_time`, optional `end_time` | Only when the vehicle has no charging schedule. |
+| `mazda_6e.delete_charge_schedule` | `device_id` | Deletes the first charging schedule. |
+| `mazda_6e.create_battery_preheating` | `device_id`, `departure_time` | Experimental: the endpoint is inferred from the captured update command. |
+| `mazda_6e.delete_battery_preheating` | `device_id` | Experimental, as above. |
