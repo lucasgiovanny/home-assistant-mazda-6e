@@ -1,6 +1,11 @@
 """Cover controls for Mazda 6e windows."""
 
-from homeassistant.components.cover import CoverDeviceClass, CoverEntity, CoverEntityDescription
+from homeassistant.components.cover import (
+    CoverDeviceClass,
+    CoverEntity,
+    CoverEntityDescription,
+    CoverEntityFeature,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -53,6 +58,9 @@ class _Mazda6eCover(Mazda6eEntity, CoverEntity):
 
 class Mazda6eWindowsCover(_Mazda6eCover):
     """Represent all vehicle windows as one cover."""
+
+    # Remote open only lowers the windows to a vent gap; there is no stop or position command.
+    _attr_supported_features = CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
 
     def __init__(self, coordinator, vehicle) -> None:
         super().__init__(coordinator, vehicle, WINDOWS_DESCRIPTION)
