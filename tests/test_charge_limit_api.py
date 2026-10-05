@@ -186,20 +186,6 @@ def test_get_battery_preheating_plan_uses_observed_contract(api_context):
             },
             b"endData=20261006073000&planType=0&seriralNo=serial&vehicleId=123",
         ),
-        (
-            "async_delete_battery_preheating",
-            (123, 7),
-            "/heating-plans/delete-plan",
-            "5",
-            {
-                "planId": "7",
-                "command": "COMMAND_HEATING_PLANS_DELETE",
-                "rcToken": "",
-                "seriralNo": "serial",
-                "vehicleId": "123",
-            },
-            b"planId=7&seriralNo=serial&vehicleId=123",
-        ),
     ],
 )
 def test_battery_preheating_commands_use_observed_contract(

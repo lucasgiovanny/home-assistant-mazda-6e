@@ -51,5 +51,4 @@ All charging controls require the control key registered through **Reconfigure**
 |---|---|---|
 | `mazda_6e.create_charge_schedule` | `device_id`, `start_time`, optional `end_time` | Only when the vehicle has no charging schedule. |
 | `mazda_6e.delete_charge_schedule` | `device_id` | Deletes the first charging schedule. |
-| `mazda_6e.create_battery_preheating` | `device_id`, `departure_time` | Experimental: the endpoint is inferred from the captured update command. |
-| `mazda_6e.delete_battery_preheating` | `device_id` | Experimental, as above. |
+| `mazda_6e.create_battery_preheating` | `device_id`, `departure_time` | Only when the vehicle has no battery-preheating plan. Preheating starts 20 minutes before departure. The plan can then be edited and disabled with its time and switch entities; deleting it is only possible in the Mazda app. |

@@ -70,6 +70,7 @@ class Mazda6EApi:
         """generic request method with token refresh handling"""
         async with self.session.post(url, headers=headers, json=body) as resp:
             raw = await resp.json()
+            http_status = resp.status
 
         if raw.get("success") is True:
             return raw
@@ -86,8 +87,8 @@ class Mazda6EApi:
 
             # try again once
             return await self._request(url, headers, body, retry=False)
-        code = raw.get("code", "unknown")
-        message = raw.get("msg", "unknown error")
+        code = raw.get("code") or f"HTTP {http_status}"
+        message = raw.get("msg") or raw.get("message") or raw.get("error") or "unknown error"
         raise MazdaApiError(f"Mazda API request rejected ({code}: {message})")
 
     async def login_email_password(self, email_enc, password_enc):
@@ -403,21 +404,12 @@ class Mazda6EApi:
         )
 
     async def async_add_battery_preheating(self, vehicle_id: int, end_data: str) -> dict:
-        """Create a battery-preheating plan; route inferred from the update-plan naming."""
+        """Create a battery-preheating plan."""
         return await self._async_battery_preheating_command(
             vehicle_id,
             "add-plan",
             "COMMAND_HEATING_PLANS_ADD",
             {"endData": end_data, "planType": 0},
-        )
-
-    async def async_delete_battery_preheating(self, vehicle_id: int, plan_id: int | str) -> dict:
-        """Delete a battery-preheating plan; route inferred from the update-plan naming."""
-        return await self._async_battery_preheating_command(
-            vehicle_id,
-            "delete-plan",
-            "COMMAND_HEATING_PLANS_DELETE",
-            {"planId": str(plan_id)},
         )
 
     async def _async_battery_preheating_command(

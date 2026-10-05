@@ -373,7 +373,7 @@
     },
     "create_battery_preheating": {
       "name": "Create battery preheating",
-      "description": "Creates a battery-preheating plan when the vehicle has none (experimental).",
+      "description": "Creates a battery-preheating plan when the vehicle has none.",
       "fields": {
         "device_id": {
           "name": "Vehicle",
@@ -382,16 +382,6 @@
         "departure_time": {
           "name": "Departure time",
           "description": "Time when the battery should be warm."
-        }
-      }
-    },
-    "delete_battery_preheating": {
-      "name": "Delete battery preheating",
-      "description": "Deletes the vehicle's battery-preheating plan (experimental).",
-      "fields": {
-        "device_id": {
-          "name": "Vehicle",
-          "description": "The Mazda 6e vehicle."
         }
       }
     }
