@@ -18,7 +18,7 @@ TO_REDACT_CONFIG = [
     CONF_EMAIL, CONF_PASSWORD, CONF_CONTROL_PIN, 'email_enc', 'refresh', 'token', 'deviceid',
     'control_private_key', 'control_public_key',
 ]
-TO_REDACT_DATA = ["vin", "vehicle_id", "vehicleId", "location", "token", "access_token", "refresh_token", "session_id"]
+TO_REDACT_DATA = ["vin", "vehicle_id", "vehicleId", "vehicleIdStr", "location", "token", "access_token", "refresh_token", "session_id"]
 
 
 async def async_get_config_entry_diagnostics(
@@ -36,7 +36,7 @@ async def async_get_config_entry_diagnostics(
             {
                 "vehicle_id": vehicle_id,
                 "status": async_redact_data(vehicle_status, TO_REDACT_DATA),
-                "heating_plans": entry.get("heating_plans"),
+                "heating_plans": async_redact_data(entry.get("heating_plans") or [], TO_REDACT_DATA),
             }
         )
 

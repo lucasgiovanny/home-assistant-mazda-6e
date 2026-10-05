@@ -1,4 +1,4 @@
-"""Services that create and delete Mazda 6e charging and battery-preheating plans."""
+"""Services that manage Mazda 6e charging and battery-preheating plans."""
 
 from __future__ import annotations
 
@@ -23,7 +23,6 @@ ATTR_DEPARTURE_TIME = "departure_time"
 SERVICE_CREATE_CHARGE_SCHEDULE = "create_charge_schedule"
 SERVICE_DELETE_CHARGE_SCHEDULE = "delete_charge_schedule"
 SERVICE_CREATE_BATTERY_PREHEATING = "create_battery_preheating"
-SERVICE_DELETE_BATTERY_PREHEATING = "delete_battery_preheating"
 
 COMMAND_ERRORS = (KeyError, MazdaApiError, RuntimeError, TimeoutError, ValueError)
 
@@ -114,19 +113,6 @@ def async_setup_services(hass: HomeAssistant) -> None:
             lambda: coordinator.data.get(vehicle_id, {}).get("battery_preheating_plan") is not None,
         )
 
-    async def delete_battery_preheating(call: ServiceCall) -> None:
-        coordinator, vehicle_id, item = _resolve_vehicle(hass, call.data[ATTR_DEVICE_ID])
-        plan = item.get("battery_preheating_plan")
-        if plan is None:
-            raise ServiceValidationError("There is no battery-preheating plan to delete")
-        try:
-            await coordinator.api.async_delete_battery_preheating(vehicle_id, plan["planId"])
-        except COMMAND_ERRORS as err:
-            raise HomeAssistantError(f"Mazda rejected the delete battery preheating command: {err}") from err
-        await coordinator.async_refresh_until(
-            lambda: coordinator.data.get(vehicle_id, {}).get("battery_preheating_plan") is None,
-        )
-
     hass.services.async_register(
         DOMAIN, SERVICE_CREATE_CHARGE_SCHEDULE, create_charge_schedule, schema=CREATE_CHARGE_SCHEDULE_SCHEMA,
     )
@@ -136,7 +122,4 @@ def async_setup_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN, SERVICE_CREATE_BATTERY_PREHEATING, create_battery_preheating,
         schema=CREATE_BATTERY_PREHEATING_SCHEMA,
-    )
-    hass.services.async_register(
-        DOMAIN, SERVICE_DELETE_BATTERY_PREHEATING, delete_battery_preheating, schema=DEVICE_SCHEMA,
     )

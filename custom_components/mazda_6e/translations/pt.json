@@ -373,7 +373,7 @@
     },
     "create_battery_preheating": {
       "name": "Criar pré-aquecimento da bateria",
-      "description": "Cria um plano de pré-aquecimento da bateria quando o veículo não tem nenhum (experimental).",
+      "description": "Cria um plano de pré-aquecimento da bateria quando o veículo não tem nenhum.",
       "fields": {
         "device_id": {
           "name": "Veículo",
@@ -382,16 +382,6 @@
         "departure_time": {
           "name": "Hora de partida",
           "description": "Hora a que a bateria deve estar aquecida."
-        }
-      }
-    },
-    "delete_battery_preheating": {
-      "name": "Eliminar pré-aquecimento da bateria",
-      "description": "Elimina o plano de pré-aquecimento da bateria do veículo (experimental).",
-      "fields": {
-        "device_id": {
-          "name": "Veículo",
-          "description": "O veículo Mazda 6e."
         }
       }
     }
