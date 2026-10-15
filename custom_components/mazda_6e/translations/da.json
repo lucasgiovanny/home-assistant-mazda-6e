@@ -220,6 +220,9 @@
       "humidity_inside": {
         "name": "Luftfugtighed"
       },
+      "last_trip": {
+        "name": "Seneste tur"
+      },
       "last_updated": {
         "name": "Senest opdateret"
       },
@@ -298,6 +301,18 @@
       "temperature_target": {
         "name": "Måltemperatur"
       },
+      "trips_month_consumption": {
+        "name": "Forbrug denne måned"
+      },
+      "trips_month_count": {
+        "name": "Ture denne måned"
+      },
+      "trips_month_distance": {
+        "name": "Distance denne måned"
+      },
+      "trips_month_energy": {
+        "name": "Energi denne måned"
+      },
       "vehicle_status": {
         "name": "Køretøjsstatus",
         "state": {
@@ -324,6 +339,17 @@
     "time": {
       "battery_preheating_departure_time": {
         "name": "Afgangstid for batteriforvarmning"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ture",
+        "description": "Batterikapacitet, der bruges til at anslå energien for hver tur ud fra ladetilstanden.",
+        "data": {
+          "battery_capacity_kwh": "Batterikapacitet"
+        }
       }
     }
   }

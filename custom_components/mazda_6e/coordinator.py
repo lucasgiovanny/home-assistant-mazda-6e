@@ -3,10 +3,13 @@ import asyncio
 
 from datetime import timedelta
 from collections.abc import Callable
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import ConfigEntryAuthFailed
 
-from .const import DOMAIN, UPDATE_INTERVAL
+from .const import CONF_BATTERY_CAPACITY, DOMAIN, EVENT_TRIP, UPDATE_INTERVAL
+from .helpers.trips import DEFAULT_BATTERY_CAPACITY_KWH, MAX_TRIPS, TripTracker
 from .models import Mazda6eVehicle
 from .api import MazdaApiError, battery_preheating_plan
 
@@ -27,6 +30,48 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
         self._function_config: dict[int, set[str]] = {}
         self._last_vehicle_status: dict[int, object] = {}
         self._control_locks: dict[int, asyncio.Lock] = {}
+        self._trip_store = Store(hass, 1, f"{DOMAIN}_trips_{config_entry.entry_id}")
+        self._trackers: dict[str, TripTracker] = {}
+        self.trips: dict[str, list[dict]] = {}
+
+    async def async_load_trips(self) -> None:
+        """Restore the trip log and any trip still in progress."""
+        stored = await self._trip_store.async_load() or {}
+        self.trips = stored.get("trips", {})
+        self._trackers = {
+            vehicle_id: TripTracker(state) for vehicle_id, state in stored.get("trackers", {}).items()
+        }
+
+    def _trip_data(self) -> dict:
+        return {
+            "trips": self.trips,
+            "trackers": {vehicle_id: tracker.as_dict() for vehicle_id, tracker in self._trackers.items()},
+        }
+
+    def _track_trip(self, vehicle_id: int, status_response: dict | None) -> None:
+        """Feed the poll to the trip tracker; a finished trip is logged and announced."""
+        vehicle_status = (status_response or {}).get("vehicleStatus") or {}
+        try:
+            odometer = float(vehicle_status["totalMileage"])
+        except (KeyError, TypeError, ValueError):
+            odometer = None
+        try:
+            soc = float(vehicle_status["soc"])
+        except (KeyError, TypeError, ValueError):
+            soc = None
+
+        key = str(vehicle_id)
+        tracker = self._trackers.setdefault(key, TripTracker())
+        before = tracker.as_dict()
+        capacity = float(self.config_entry.options.get(CONF_BATTERY_CAPACITY, DEFAULT_BATTERY_CAPACITY_KWH))
+        trip = tracker.update(vehicle_status.get("status"), odometer, soc, dt_util.now(), capacity)
+
+        if trip:
+            self.trips[key] = [trip, *self.trips.get(key, [])][:MAX_TRIPS]
+            self.hass.bus.async_fire(EVENT_TRIP, {"vehicle_id": vehicle_id, **trip})
+            _LOGGER.info("Vehicle %s finished a %s km trip", vehicle_id, trip["distance_km"])
+        if trip or tracker.as_dict() != before:
+            self._trip_store.async_delay_save(self._trip_data, 10)
 
     def _get_control_lock(self, vehicle_id: int) -> asyncio.Lock:
         lock = self._control_locks.get(vehicle_id)
@@ -122,9 +167,12 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
                 _LOGGER.info("Vehicle %s status code changed to %s", veh.vehicle_id, status_code)
                 self._last_vehicle_status[veh.vehicle_id] = status_code
 
+            self._track_trip(veh.vehicle_id, status_response)
+
             vehicle_status[veh.vehicle_id] = {
                 "vehicle": veh,
                 "status": status_response,
+                "trips": self.trips.get(str(veh.vehicle_id), []),
                 "heating_plans": heating_plans,
                 "battery_preheating_plan": battery_preheating_plan(heating_plans or []),
             }

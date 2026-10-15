@@ -5,9 +5,19 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_REGION
 from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType, SelectSelector, SelectSelectorConfig
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 
-from .const import CONF_CONTROL_PIN, DOMAIN, REGION_EUROPE, REGION_ASIA
+from .const import CONF_BATTERY_CAPACITY, CONF_CONTROL_PIN, DOMAIN, REGION_EUROPE, REGION_ASIA
+from .helpers.trips import DEFAULT_BATTERY_CAPACITY_KWH
 from .api import Mazda6EApi, MazdaLoginError
 from .credential_crypto import encrypt_credential, generate_control_key_pair
 
@@ -57,6 +67,24 @@ def reconfigure_schema(region):
     })
 
 
+class Mazda6eOptionsFlow(config_entries.OptionsFlow):
+    """Battery capacity used to turn the state of charge into kWh per trip."""
+
+    async def async_step_init(self, user_input=None):
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+
+        current = self.config_entry.options.get(CONF_BATTERY_CAPACITY, DEFAULT_BATTERY_CAPACITY_KWH)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Required(CONF_BATTERY_CAPACITY, default=current): NumberSelector(
+                    NumberSelectorConfig(min=20, max=150, step=0.1, unit_of_measurement="kWh", mode=NumberSelectorMode.BOX)
+                ),
+            }),
+        )
+
+
 class Mazda6eConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -72,6 +100,10 @@ class Mazda6eConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.control_private_key = None
         self.control_pin = None
         self.region = None
+
+    @staticmethod
+    def async_get_options_flow(config_entry):
+        return Mazda6eOptionsFlow()
 
     # ------------------------------------------------------------------
     # STEP 0: Start reauthentication

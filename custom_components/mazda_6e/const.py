@@ -1,5 +1,7 @@
 DOMAIN = "mazda_6e"
 CONF_CONTROL_PIN = "control_pin"
+CONF_BATTERY_CAPACITY = "battery_capacity_kwh"
+EVENT_TRIP = "mazda_6e_trip"
 REGION_EUROPE = "europe"
 REGION_ASIA = "asia"
 

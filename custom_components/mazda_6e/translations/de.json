@@ -220,6 +220,9 @@
       "humidity_inside": {
         "name": "Luftfeuchtigkeit"
       },
+      "last_trip": {
+        "name": "Letzte Fahrt"
+      },
       "last_updated": {
         "name": "Zuletzt aktualisiert"
       },
@@ -298,6 +301,18 @@
       "temperature_target": {
         "name": "Zieltemperatur"
       },
+      "trips_month_consumption": {
+        "name": "Verbrauch diesen Monat"
+      },
+      "trips_month_count": {
+        "name": "Fahrten diesen Monat"
+      },
+      "trips_month_distance": {
+        "name": "Strecke diesen Monat"
+      },
+      "trips_month_energy": {
+        "name": "Energie diesen Monat"
+      },
       "vehicle_status": {
         "name": "Fahrzeugstatus",
         "state": {
@@ -324,6 +339,17 @@
     "time": {
       "battery_preheating_departure_time": {
         "name": "Abfahrtszeit für das Vorheizen der Batterie"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Fahrten",
+        "description": "Batteriekapazität, mit der die Energie jeder Fahrt aus dem Ladestand geschätzt wird.",
+        "data": {
+          "battery_capacity_kwh": "Batteriekapazität"
+        }
       }
     }
   }

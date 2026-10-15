@@ -226,6 +226,9 @@
       "humidity_inside": {
         "name": "Humidade"
       },
+      "last_trip": {
+        "name": "Última viagem"
+      },
       "last_updated": {
         "name": "Última atualização"
       },
@@ -303,6 +306,18 @@
       },
       "temperature_target": {
         "name": "Temperatura pretendida"
+      },
+      "trips_month_consumption": {
+        "name": "Consumo no mês"
+      },
+      "trips_month_count": {
+        "name": "Viagens no mês"
+      },
+      "trips_month_distance": {
+        "name": "Distância no mês"
+      },
+      "trips_month_energy": {
+        "name": "Energia no mês"
       },
       "vehicle_status": {
         "name": "Estado do veículo",
@@ -382,6 +397,17 @@
         "departure_time": {
           "name": "Hora de partida",
           "description": "Hora a que a bateria deve estar aquecida."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Viagens",
+        "description": "Capacidade da bateria usada para estimar a energia de cada viagem a partir da carga.",
+        "data": {
+          "battery_capacity_kwh": "Capacidade da bateria"
         }
       }
     }

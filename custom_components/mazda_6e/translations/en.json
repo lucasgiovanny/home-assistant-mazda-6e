@@ -226,6 +226,9 @@
       "humidity_inside": {
         "name": "Humidity"
       },
+      "last_trip": {
+        "name": "Last trip"
+      },
       "last_updated": {
         "name": "Last updated"
       },
@@ -303,6 +306,18 @@
       },
       "temperature_target": {
         "name": "Target temperature"
+      },
+      "trips_month_consumption": {
+        "name": "Consumption this month"
+      },
+      "trips_month_count": {
+        "name": "Trips this month"
+      },
+      "trips_month_distance": {
+        "name": "Distance this month"
+      },
+      "trips_month_energy": {
+        "name": "Energy this month"
       },
       "vehicle_status": {
         "name": "Vehicle status",
@@ -382,6 +397,17 @@
         "departure_time": {
           "name": "Departure time",
           "description": "Time when the battery should be warm."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Trips",
+        "description": "Battery capacity used to estimate the energy of each trip from the state of charge.",
+        "data": {
+          "battery_capacity_kwh": "Battery capacity"
         }
       }
     }

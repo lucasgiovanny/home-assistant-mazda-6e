@@ -14,6 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfDensity,
+    UnitOfEnergy,
     UnitOfElectricCurrent,
     UnitOfLength,
     UnitOfPressure,
@@ -24,11 +25,13 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .entity import Mazda6eEntity
 from .entity_deduplication import control_replaces_read_only_entity
 from .helpers.charge_plan import charge_plans, describe_plan
+from .helpers.trips import month_totals
 from .helpers.validators import remaining_charge_time, speed_value, temperature, timestamp_ms
 from .models import Mazda6eVehicle, ChargeStatus, PowerStatus, SeatStatusMode, VehicleStatus
 
@@ -85,6 +88,22 @@ def _tire_pressure(position: str) -> Mazda6eSensorDescription:
             "status": data["status"]["tire"][p].get("status"),
         },
     )
+
+
+# Recent trips kept in the attributes, small enough for the recorder's attribute limit.
+_RECENT_TRIPS = 30
+_RECENT_TRIP_KEYS = ("start", "end", "duration_min", "distance_km", "soc_used", "energy_kwh", "consumption_kwh_100km")
+
+
+def _last_trip_attrs(data: dict) -> dict:
+    trips = data.get("trips") or []
+    attrs = dict(trips[0]) if trips else {}
+    attrs["recent_trips"] = [{key: trip.get(key) for key in _RECENT_TRIP_KEYS} for trip in trips[:_RECENT_TRIPS]]
+    return attrs
+
+
+def _month(field: str) -> Callable[[dict], Any]:
+    return lambda data: month_totals(data.get("trips") or [], dt_util.now())[field]
 
 
 SENSOR_TYPES: tuple[Mazda6eSensorDescription, ...] = (
@@ -265,6 +284,53 @@ SENSOR_TYPES: tuple[Mazda6eSensorDescription, ...] = (
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: timestamp_ms(data["status"]["lastUpdatedAt"]),
+    ),
+    Mazda6eSensorDescription(
+        key="last_trip",
+        translation_key="last_trip",
+        icon="mdi:map-marker-path",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        skip_if_unavailable=False,
+        value_fn=lambda data: (data.get("trips") or [{}])[0].get("distance_km"),
+        attrs_fn=_last_trip_attrs,
+    ),
+    Mazda6eSensorDescription(
+        key="trips_month_distance",
+        translation_key="trips_month_distance",
+        icon="mdi:road-variant",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        skip_if_unavailable=False,
+        value_fn=_month("distance_km"),
+    ),
+    Mazda6eSensorDescription(
+        key="trips_month_energy",
+        translation_key="trips_month_energy",
+        icon="mdi:lightning-bolt",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        skip_if_unavailable=False,
+        value_fn=_month("energy_kwh"),
+    ),
+    Mazda6eSensorDescription(
+        key="trips_month_consumption",
+        translation_key="trips_month_consumption",
+        icon="mdi:speedometer",
+        native_unit_of_measurement="kWh/100 km",
+        state_class=SensorStateClass.MEASUREMENT,
+        skip_if_unavailable=False,
+        value_fn=_month("consumption_kwh_100km"),
+    ),
+    Mazda6eSensorDescription(
+        key="trips_month_count",
+        translation_key="trips_month_count",
+        icon="mdi:counter",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        skip_if_unavailable=False,
+        value_fn=_month("trips"),
     ),
 )
 

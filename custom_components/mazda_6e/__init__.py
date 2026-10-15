@@ -51,6 +51,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     )
 
     coordinator = Mazda6eCoordinator(hass, config_entry, mazda6e_api)
+    await coordinator.async_load_trips()
 
     try:
         await coordinator.async_config_entry_first_refresh()
@@ -64,8 +65,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    config_entry.async_on_unload(config_entry.add_update_listener(_async_options_updated))
 
     return True
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

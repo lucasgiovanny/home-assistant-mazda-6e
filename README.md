@@ -45,6 +45,16 @@ Reconfiguration signs in again and registers the control key required for signed
 
 All charging controls require the control key registered through **Reconfigure**, but not the Control Passcode.
 
+# Trips
+
+The integration keeps a log of the last 100 trips, built from the vehicle's driving/parked status, the odometer and the state of charge. A trip starts when the vehicle reports *driving* and ends once it has been parked for 5 minutes, so short stops stay inside the same trip. The log survives Home Assistant restarts.
+
+- **Last trip** (sensor, km) has the latest trip's start, end, duration, distance, state of charge used, estimated energy, consumption and average speed as attributes, plus `recent_trips` with the last 30 trips.
+- **Distance this month**, **Energy this month**, **Consumption this month** and **Trips this month** (sensors) total the current calendar month and reset on the 1st.
+- Each finished trip fires a `mazda_6e_trip` event with the same fields and the `vehicle_id`.
+
+Energy is estimated from the state of charge, so it includes everything the battery supplied while driving, such as climate. The battery capacity used for it defaults to 68.8 kWh and can be changed under **Configure** for the long-range battery. The Mazda API reports no location, so trips have no start or end place.
+
 # Services
 
 | Service | Fields | Notes |
