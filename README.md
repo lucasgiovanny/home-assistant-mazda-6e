@@ -47,7 +47,7 @@ All charging controls require the control key registered through **Reconfigure**
 
 # Trips
 
-The integration keeps a log of the last 100 trips, built from the vehicle's driving/parked status, the odometer and the state of charge. A trip starts when the vehicle reports *driving* and ends once it has been parked for 5 minutes, so short stops stay inside the same trip. The log survives Home Assistant restarts.
+The integration keeps a log of the last 100 trips, built from the vehicle's driving/parked status, the odometer and the state of charge. A trip starts when the vehicle reports *driving* and the odometer moves, and ends once it has been parked for 5 minutes, so short stops stay inside the same trip. Remote climate before leaving also reports *driving*, but with the car standing still it is not counted. The log survives Home Assistant restarts.
 
 - **Last trip** (sensor, km) has the latest trip's start, end, duration, distance, state of charge used, estimated energy, consumption and average speed as attributes, plus `recent_trips` with the last 30 trips.
 - **Distance this month**, **Energy this month**, **Consumption this month** and **Trips this month** (sensors) total the current calendar month and reset on the 1st.

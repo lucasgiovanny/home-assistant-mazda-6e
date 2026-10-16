@@ -78,7 +78,8 @@ class TripTracker:
             return None
 
         if status == DRIVING:
-            if self.start is None:
+            # Remote climate also reports driving; the trip only begins once the odometer moves.
+            if self.start is None or odometer <= self.start["odometer"]:
                 self.start = _snapshot(now, odometer, soc)
             self.stop = None
             return None

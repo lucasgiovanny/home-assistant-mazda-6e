@@ -58,6 +58,24 @@ def test_a_short_stop_belongs_to_the_same_trip():
     assert trips[0]["soc_used"] == 5
 
 
+def test_remote_climate_before_leaving_is_not_part_of_the_trip():
+    trips = feed(MODULE.TripTracker(), [
+        (0, DRIVING, 300.0, 50),
+        (10, DRIVING, 300.0, 49),
+        (15, PARKED, 300.0, 49),
+        (17, DRIVING, 300.0, 49),
+        (18, DRIVING, 301.5, 48),
+        (40, PARKED, 320.0, 45),
+        (46, PARKED, 320.0, 45),
+    ])
+
+    assert len(trips) == 1
+    assert trips[0]["start"] == (T0 + timedelta(minutes=17)).isoformat()
+    assert trips[0]["soc_start"] == 49
+    assert trips[0]["distance_km"] == 20.0
+    assert trips[0]["duration_min"] == 23
+
+
 def test_flickers_and_missing_data_do_not_make_trips():
     tracker = MODULE.TripTracker()
     assert feed(tracker, [
