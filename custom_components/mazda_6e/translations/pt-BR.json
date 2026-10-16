@@ -226,6 +226,9 @@
       "humidity_inside": {
         "name": "Umidade"
       },
+      "last_charge": {
+        "name": "Última carga"
+      },
       "last_trip": {
         "name": "Último trajeto"
       },

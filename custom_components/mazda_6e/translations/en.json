@@ -226,6 +226,9 @@
       "humidity_inside": {
         "name": "Humidity"
       },
+      "last_charge": {
+        "name": "Last charge"
+      },
       "last_trip": {
         "name": "Last trip"
       },

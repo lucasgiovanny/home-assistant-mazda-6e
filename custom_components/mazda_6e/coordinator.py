@@ -8,9 +8,10 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import ConfigEntryAuthFailed
 
-from .const import CONF_BATTERY_CAPACITY, DOMAIN, EVENT_TRIP, UPDATE_INTERVAL
+from .const import CONF_BATTERY_CAPACITY, DOMAIN, EVENT_CHARGE, EVENT_TRIP, UPDATE_INTERVAL
+from .helpers.charges import MAX_CHARGES, ChargeTracker
 from .helpers.trips import DEFAULT_BATTERY_CAPACITY_KWH, MAX_TRIPS, TripTracker
-from .models import Mazda6eVehicle
+from .models import ChargeConnectionStatus, ChargeStatus, Mazda6eVehicle
 from .api import MazdaApiError, battery_preheating_plan
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,21 +33,34 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
         self._control_locks: dict[int, asyncio.Lock] = {}
         self._trip_store = Store(hass, 1, f"{DOMAIN}_trips_{config_entry.entry_id}")
         self._trackers: dict[str, TripTracker] = {}
+        self._charge_trackers: dict[str, ChargeTracker] = {}
         self.trips: dict[str, list[dict]] = {}
+        self.charges: dict[str, list[dict]] = {}
 
     async def async_load_trips(self) -> None:
-        """Restore the trip log and any trip still in progress."""
+        """Restore the trip and charge logs and anything still in progress."""
         stored = await self._trip_store.async_load() or {}
         self.trips = stored.get("trips", {})
         self._trackers = {
             vehicle_id: TripTracker(state) for vehicle_id, state in stored.get("trackers", {}).items()
+        }
+        self.charges = stored.get("charges", {})
+        self._charge_trackers = {
+            vehicle_id: ChargeTracker(state) for vehicle_id, state in stored.get("charge_trackers", {}).items()
         }
 
     def _trip_data(self) -> dict:
         return {
             "trips": self.trips,
             "trackers": {vehicle_id: tracker.as_dict() for vehicle_id, tracker in self._trackers.items()},
+            "charges": self.charges,
+            "charge_trackers": {
+                vehicle_id: tracker.as_dict() for vehicle_id, tracker in self._charge_trackers.items()
+            },
         }
+
+    def _capacity(self) -> float:
+        return float(self.config_entry.options.get(CONF_BATTERY_CAPACITY, DEFAULT_BATTERY_CAPACITY_KWH))
 
     def _track_trip(self, vehicle_id: int, status_response: dict | None) -> None:
         """Feed the poll to the trip tracker; a finished trip is logged and announced."""
@@ -63,8 +77,7 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
         key = str(vehicle_id)
         tracker = self._trackers.setdefault(key, TripTracker())
         before = tracker.as_dict()
-        capacity = float(self.config_entry.options.get(CONF_BATTERY_CAPACITY, DEFAULT_BATTERY_CAPACITY_KWH))
-        trip = tracker.update(vehicle_status.get("status"), odometer, soc, dt_util.now(), capacity)
+        trip = tracker.update(vehicle_status.get("status"), odometer, soc, dt_util.now(), self._capacity())
 
         if trip:
             self.trips[key] = [trip, *self.trips.get(key, [])][:MAX_TRIPS]
@@ -72,6 +85,42 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
             _LOGGER.info("Vehicle %s finished a %s km trip", vehicle_id, trip["distance_km"])
         if trip or tracker.as_dict() != before:
             self._trip_store.async_delay_save(self._trip_data, 10)
+
+    def _track_charge(self, vehicle_id: int, status_response: dict | None) -> None:
+        """Feed the poll to the charge tracker; a finished session is logged and announced."""
+        status_response = status_response or {}
+        charge = status_response.get("charge") or {}
+        ac = charge.get("chargeConStatus")
+        dc = charge.get("dcChargeGunConnectStatus")
+        connected = None if ac is None and dc is None else ChargeConnectionStatus.CONNECTED in (ac, dc)
+        try:
+            soc = float((status_response.get("vehicleStatus") or {})["soc"])
+        except (KeyError, TypeError, ValueError):
+            soc = None
+        try:
+            current = float(charge["chargeCurrent"])
+        except (KeyError, TypeError, ValueError):
+            current = None
+
+        key = str(vehicle_id)
+        tracker = self._charge_trackers.setdefault(key, ChargeTracker())
+        session = tracker.update(
+            connected,
+            dc == ChargeConnectionStatus.CONNECTED,
+            charge.get("chargeStatus") == ChargeStatus.CHARGING,
+            soc,
+            current,
+            dt_util.now(),
+            self._capacity(),
+        )
+
+        if session:
+            self.charges[key] = [session, *self.charges.get(key, [])][:MAX_CHARGES]
+            self.hass.bus.async_fire(EVENT_CHARGE, {"vehicle_id": vehicle_id, **session})
+            _LOGGER.info("Vehicle %s finished a %s charge of %s kWh", vehicle_id, session["type"], session["energy_kwh"])
+        # Shorter than the poll interval, or the rescheduled save would never run mid-session.
+        if session or tracker.session:
+            self._trip_store.async_delay_save(self._trip_data, 30)
 
     def _get_control_lock(self, vehicle_id: int) -> asyncio.Lock:
         lock = self._control_locks.get(vehicle_id)
@@ -168,11 +217,13 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
                 self._last_vehicle_status[veh.vehicle_id] = status_code
 
             self._track_trip(veh.vehicle_id, status_response)
+            self._track_charge(veh.vehicle_id, status_response)
 
             vehicle_status[veh.vehicle_id] = {
                 "vehicle": veh,
                 "status": status_response,
                 "trips": self.trips.get(str(veh.vehicle_id), []),
+                "charges": self.charges.get(str(veh.vehicle_id), []),
                 "heating_plans": heating_plans,
                 "battery_preheating_plan": battery_preheating_plan(heating_plans or []),
             }

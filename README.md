@@ -55,6 +55,15 @@ The integration keeps a log of the last 100 trips, built from the vehicle's driv
 
 Energy is estimated from the state of charge, so it includes everything the battery supplied while driving, such as climate. The battery capacity used for it defaults to 68.8 kWh and can be changed under **Configure** for the long-range battery. The Mazda API reports no location, so trips have no start or end place.
 
+# Charging sessions
+
+The integration also keeps a log of the last 100 charging sessions. A session runs from plugging in (AC cable or DC gun) to unplugging, so pauses in between, such as solar charging stopping and resuming, stay inside the same session. Plugging in without the car ever charging is not logged. The log survives Home Assistant restarts.
+
+- **Last charge** (sensor, kWh) has the latest session's start, end, duration, time actually charging, state of charge at start and end, estimated energy, type (`AC` or `DC`) and peak current as attributes, plus `recent_charges` with the last 30 sessions.
+- Each finished session fires a `mazda_6e_charge` event with the same fields and the `vehicle_id`.
+
+Energy is estimated from the state of charge with the same battery capacity as trips, so it is what reached the battery, without charging losses.
+
 # Services
 
 | Service | Fields | Notes |

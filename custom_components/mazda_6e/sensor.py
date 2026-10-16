@@ -102,6 +102,21 @@ def _last_trip_attrs(data: dict) -> dict:
     return attrs
 
 
+_RECENT_CHARGES = 30
+_RECENT_CHARGE_KEYS = (
+    "start", "end", "duration_min", "charging_min", "soc_start", "soc_end", "energy_kwh", "type", "peak_current_a",
+)
+
+
+def _last_charge_attrs(data: dict) -> dict:
+    charges = data.get("charges") or []
+    attrs = dict(charges[0]) if charges else {}
+    attrs["recent_charges"] = [
+        {key: charge.get(key) for key in _RECENT_CHARGE_KEYS} for charge in charges[:_RECENT_CHARGES]
+    ]
+    return attrs
+
+
 def _month(field: str) -> Callable[[dict], Any]:
     return lambda data: month_totals(data.get("trips") or [], dt_util.now())[field]
 
@@ -294,6 +309,16 @@ SENSOR_TYPES: tuple[Mazda6eSensorDescription, ...] = (
         skip_if_unavailable=False,
         value_fn=lambda data: (data.get("trips") or [{}])[0].get("distance_km"),
         attrs_fn=_last_trip_attrs,
+    ),
+    Mazda6eSensorDescription(
+        key="last_charge",
+        translation_key="last_charge",
+        icon="mdi:ev-station",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        skip_if_unavailable=False,
+        value_fn=lambda data: (data.get("charges") or [{}])[0].get("energy_kwh"),
+        attrs_fn=_last_charge_attrs,
     ),
     Mazda6eSensorDescription(
         key="trips_month_distance",
