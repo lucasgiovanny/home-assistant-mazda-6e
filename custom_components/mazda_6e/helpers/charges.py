@@ -8,6 +8,8 @@ from typing import Any
 MAX_CHARGES = 100
 # Longer poll gaps (HA restart, API outage) are not counted as charging time.
 MAX_POLL_GAP = timedelta(minutes=5)
+# A full battery that has stopped charging this long ends the session, so pauses while balancing at 100% do not.
+FULL_IDLE = timedelta(minutes=10)
 
 
 def build_charge(session: dict[str, Any], capacity_kwh: float) -> dict[str, Any] | None:
@@ -36,13 +38,15 @@ def build_charge(session: dict[str, Any], capacity_kwh: float) -> dict[str, Any]
 
 
 class ChargeTracker:
-    """Follows the cable from plug-in to unplug and hands back each finished session."""
+    """Follows the cable from plug-in to unplug (or to a full battery) and hands back each finished session."""
 
     def __init__(self, state: dict[str, Any] | None = None) -> None:
         self.session: dict[str, Any] | None = (state or {}).get("session")
+        # After a session closed at 100%, a still-plugged car starts a new one only when it charges again.
+        self.full: bool = (state or {}).get("full", False)
 
     def as_dict(self) -> dict[str, Any]:
-        return {"session": self.session}
+        return {"session": self.session, "full": self.full}
 
     def update(
         self,
@@ -54,12 +58,13 @@ class ChargeTracker:
         now: datetime,
         capacity_kwh: float,
     ) -> dict[str, Any] | None:
-        """Feed one poll; returns a finished session once the cable is unplugged."""
+        """Feed one poll; returns a finished session once the cable is unplugged or the battery is full."""
         if connected is None:
             return None
 
         session = self.session
         if not connected:
+            self.full = False
             if session is None:
                 return None
             self.session = None
@@ -67,6 +72,9 @@ class ChargeTracker:
 
         stamp = now.isoformat()
         if session is None:
+            if self.full and not charging:
+                return None
+            self.full = False
             session = self.session = {
                 "start": stamp,
                 "end": stamp,
@@ -90,4 +98,14 @@ class ChargeTracker:
             session["soc_end"] = soc
         if charging and current is not None:
             session["peak_current_a"] = max(session["peak_current_a"], round(abs(current)))
-        return None
+
+        if charging or soc is None or soc < 100:
+            session.pop("full_since", None)
+            return None
+        full_since = session.setdefault("full_since", stamp)
+        if now - datetime.fromisoformat(full_since) < FULL_IDLE:
+            return None
+        self.session = None
+        self.full = True
+        session["end"] = full_since
+        return build_charge(session, capacity_kwh)

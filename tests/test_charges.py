@@ -70,7 +70,7 @@ def test_plugging_in_without_charging_is_not_logged():
         (5, True, False, False, 80, 0),
         (6, False, False, False, 80, 0),
     ]) == []
-    assert tracker.as_dict() == {"session": None}
+    assert tracker.as_dict() == {"session": None, "full": False}
 
 
 def test_missing_data_neither_starts_nor_ends_a_session():
@@ -93,3 +93,50 @@ def test_an_unfinished_session_survives_a_restart_without_counting_the_gap():
     assert sessions[0]["soc_start"] == 40
     assert sessions[0]["soc_end"] == 45
     assert sessions[0]["charging_min"] == 1
+
+
+def test_a_full_battery_ends_the_session_while_still_plugged_in():
+    tracker = MODULE.ChargeTracker()
+    sessions = feed(tracker, [
+        (0, True, False, True, 98, 8),
+        (30, True, False, True, 100, 8),
+        (31, True, False, False, 100, 0),
+        (35, True, False, True, 100, 2),
+        (36, True, False, False, 100, 0),
+        (45, True, False, False, 100, 0),
+        (47, True, False, False, 100, 0),
+        (300, True, False, False, 100, 0),
+        (301, False, False, False, 100, 0),
+    ])
+
+    assert len(sessions) == 1
+    assert sessions[0]["end"] == (T0 + timedelta(minutes=36)).isoformat()
+    assert sessions[0]["soc_end"] == 100
+    assert tracker.session is None
+
+
+def test_a_top_up_after_a_full_session_is_its_own_session():
+    tracker = MODULE.ChargeTracker()
+    sessions = feed(tracker, [
+        (0, True, False, True, 99, 8),
+        (10, True, False, False, 100, 0),
+        (21, True, False, False, 100, 0),
+        (2000, True, False, False, 98, 0),
+        (2001, True, False, True, 98, 8),
+        (2060, True, False, True, 100, 8),
+        (2061, False, False, False, 100, 0),
+    ])
+
+    assert len(sessions) == 2
+    assert sessions[1]["start"] == (T0 + timedelta(minutes=2001)).isoformat()
+    assert sessions[1]["soc_start"] == 98
+
+
+def test_the_full_flag_survives_a_restart():
+    tracker = MODULE.ChargeTracker()
+    feed(tracker, [(0, True, False, True, 99, 8), (10, True, False, False, 100, 0), (21, True, False, False, 100, 0)])
+
+    restored = MODULE.ChargeTracker(tracker.as_dict())
+
+    assert feed(restored, [(30, True, False, False, 100, 0), (40, False, False, False, 100, 0)]) == []
+    assert restored.session is None
