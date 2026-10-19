@@ -140,3 +140,16 @@ def test_the_full_flag_survives_a_restart():
 
     assert feed(restored, [(30, True, False, False, 100, 0), (40, False, False, False, 100, 0)]) == []
     assert restored.session is None
+
+
+def test_a_scheduled_charge_records_when_charging_actually_began():
+    sessions = feed(MODULE.ChargeTracker(), [
+        (0, True, False, False, 40, 0),
+        (240, True, False, False, 40, 0),
+        (241, True, False, True, 40, 16),
+        (300, True, False, True, 50, 16),
+        (301, False, False, False, 50, 0),
+    ])
+
+    assert sessions[0]["start"] == T0.isoformat()
+    assert sessions[0]["charging_start"] == (T0 + timedelta(minutes=241)).isoformat()

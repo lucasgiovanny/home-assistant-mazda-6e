@@ -25,6 +25,8 @@ def build_charge(session: dict[str, Any], capacity_kwh: float) -> dict[str, Any]
     ended = datetime.fromisoformat(session["end"])
     return {
         "start": session["start"],
+        # Plug-in time stays in "start"; scheduled or off-peak charges begin later.
+        "charging_start": session.get("charging_start") or session["start"],
         "end": session["end"],
         "duration_min": round(max((ended - started).total_seconds() / 60, 0)),
         "charging_min": charging_min,
@@ -91,6 +93,8 @@ class ChargeTracker:
             session["charging_seconds"] += round(gap.total_seconds())
         session["end"] = stamp
         session["charging"] = charging
+        if charging:
+            session.setdefault("charging_start", stamp)
         session["dc"] = session["dc"] or dc
         if soc is not None:
             if session["soc_start"] is None:
