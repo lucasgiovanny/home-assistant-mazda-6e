@@ -53,7 +53,7 @@ The integration keeps a log of the last 100 trips, built from the vehicle's driv
 - **Distance this month**, **Energy this month**, **Consumption this month** and **Trips this month** (sensors) total the current calendar month and reset on the 1st.
 - Each finished trip fires a `mazda_6e_trip` event with the same fields and the `vehicle_id`.
 
-Energy is estimated from the state of charge, so it includes everything the battery supplied while driving, such as climate. The battery capacity used for it defaults to 68.8 kWh and can be changed under **Configure** for the long-range battery. The Mazda API reports no location, so trips have no start or end place.
+Energy is estimated from the state of charge, so it includes everything the battery supplied while driving, such as climate. The API reports the state of charge in whole percent, so a trip that used under 2% takes its energy from the average consumption of the last 20 trips that used 5% or more, and is marked `estimated`. The battery capacity used for it defaults to 68.8 kWh and can be changed under **Configure** for the long-range battery. The Mazda API reports no location, so trips have no start or end place.
 
 # Charging sessions
 

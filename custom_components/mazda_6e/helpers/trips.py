@@ -14,6 +14,10 @@ STOP_MERGE = timedelta(minutes=5)
 MIN_TRIP_KM = 0.3
 MAX_TRIPS = 100
 DEFAULT_BATTERY_CAPACITY_KWH = 68.8
+# The API reports whole percent, so under 2% used is mostly rounding and is estimated from longer trips.
+ESTIMATE_BELOW_SOC = 2
+REFERENCE_MIN_SOC = 5
+REFERENCE_TRIPS = 20
 
 
 def _snapshot(when: datetime, odometer: float, soc: float | None) -> dict[str, Any]:
@@ -52,6 +56,33 @@ def build_trip(start: dict[str, Any], end: dict[str, Any], capacity_kwh: float) 
         "odometer_start": start["odometer"],
         "odometer_end": end["odometer"],
     }
+
+
+def estimate_short_trips(trips: list[dict[str, Any]], capacity_kwh: float) -> list[dict[str, Any]]:
+    """Replace the rounding-dominated energy of short trips with the recent long trips' consumption."""
+    reference = [
+        trip for trip in trips
+        if not trip.get("estimated") and (trip.get("soc_used") or 0) >= REFERENCE_MIN_SOC
+    ][:REFERENCE_TRIPS]
+    distance = sum(trip["distance_km"] for trip in reference)
+    if not distance:
+        return trips
+    consumption = sum(trip["energy_kwh"] for trip in reference) / distance * 100
+
+    estimated = []
+    for trip in trips:
+        if trip.get("estimated") or trip.get("soc_used") is None or trip["soc_used"] >= ESTIMATE_BELOW_SOC:
+            estimated.append(trip)
+            continue
+        energy = trip["distance_km"] * consumption / 100
+        estimated.append({
+            **trip,
+            "soc_used": round(energy / capacity_kwh * 100, 1),
+            "energy_kwh": round(energy, 2),
+            "consumption_kwh_100km": round(consumption, 1),
+            "estimated": True,
+        })
+    return estimated
 
 
 class TripTracker:

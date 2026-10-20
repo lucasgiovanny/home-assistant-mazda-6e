@@ -119,3 +119,27 @@ def test_month_totals_count_only_the_current_month():
 
     assert totals == {"trips": 2, "distance_km": 50.0, "energy_kwh": 5.0, "consumption_kwh_100km": 10.0}
     assert MODULE.month_totals([], T0)["consumption_kwh_100km"] is None
+
+
+def test_short_trips_are_estimated_from_long_trips():
+    trips = [
+        {"distance_km": 5.0, "soc_used": 0, "energy_kwh": 0.0, "consumption_kwh_100km": 0.0},
+        {"distance_km": 4.0, "soc_used": 1, "energy_kwh": 0.69, "consumption_kwh_100km": 17.2},
+        {"distance_km": 30.0, "soc_used": 8, "energy_kwh": 5.5, "consumption_kwh_100km": 18.3},
+        {"distance_km": 10.0, "soc_used": 3, "energy_kwh": 2.06, "consumption_kwh_100km": 20.6},
+        {"distance_km": 20.0, "soc_used": 6, "energy_kwh": 4.5, "consumption_kwh_100km": 22.5},
+        {"distance_km": 3.0, "soc_used": None, "energy_kwh": None, "consumption_kwh_100km": None},
+    ]
+    result = MODULE.estimate_short_trips(trips, 68.8)
+
+    assert result[0] == {
+        "distance_km": 5.0, "soc_used": 1.5, "energy_kwh": 1.0, "consumption_kwh_100km": 20.0, "estimated": True,
+    }
+    assert result[1]["energy_kwh"] == 0.8 and result[1]["estimated"]
+    assert result[2:] == trips[2:]
+    assert MODULE.estimate_short_trips(result, 68.8) == result
+
+
+def test_short_trips_stay_measured_without_long_trips():
+    trips = [{"distance_km": 5.0, "soc_used": 0, "energy_kwh": 0.0, "consumption_kwh_100km": 0.0}]
+    assert MODULE.estimate_short_trips(trips, 68.8) == trips

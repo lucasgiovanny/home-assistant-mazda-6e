@@ -10,7 +10,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 
 from .const import CONF_BATTERY_CAPACITY, DOMAIN, EVENT_CHARGE, EVENT_TRIP, UPDATE_INTERVAL
 from .helpers.charges import MAX_CHARGES, ChargeTracker
-from .helpers.trips import DEFAULT_BATTERY_CAPACITY_KWH, MAX_TRIPS, TripTracker
+from .helpers.trips import DEFAULT_BATTERY_CAPACITY_KWH, MAX_TRIPS, TripTracker, estimate_short_trips
 from .models import ChargeConnectionStatus, ChargeStatus, Mazda6eVehicle
 from .api import MazdaApiError, battery_preheating_plan
 
@@ -40,7 +40,9 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
     async def async_load_trips(self) -> None:
         """Restore the trip and charge logs and anything still in progress."""
         stored = await self._trip_store.async_load() or {}
-        self.trips = stored.get("trips", {})
+        self.trips = {
+            vehicle_id: estimate_short_trips(trips, self._capacity()) for vehicle_id, trips in stored.get("trips", {}).items()
+        }
         self._trackers = {
             vehicle_id: TripTracker(state) for vehicle_id, state in stored.get("trackers", {}).items()
         }
@@ -80,7 +82,8 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
         trip = tracker.update(vehicle_status.get("status"), odometer, soc, dt_util.now(), self._capacity())
 
         if trip:
-            self.trips[key] = [trip, *self.trips.get(key, [])][:MAX_TRIPS]
+            self.trips[key] = estimate_short_trips([trip, *self.trips.get(key, [])][:MAX_TRIPS], self._capacity())
+            trip = self.trips[key][0]
             self.hass.bus.async_fire(EVENT_TRIP, {"vehicle_id": vehicle_id, **trip})
             _LOGGER.info("Vehicle %s finished a %s km trip", vehicle_id, trip["distance_km"])
         if trip or tracker.as_dict() != before:
