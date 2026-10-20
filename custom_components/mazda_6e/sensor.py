@@ -104,7 +104,7 @@ def _last_trip_attrs(data: dict) -> dict:
 
 _RECENT_CHARGES = 30
 _RECENT_CHARGE_KEYS = (
-    "start", "charging_start", "end", "duration_min", "charging_min", "soc_start", "soc_end", "energy_kwh", "type", "peak_current_a",
+    "start", "charging_start", "charging_end", "end", "duration_min", "charging_min", "soc_start", "soc_end", "energy_kwh", "type", "peak_current_a",
 )
 
 

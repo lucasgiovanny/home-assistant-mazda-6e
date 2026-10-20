@@ -153,3 +153,21 @@ def test_a_scheduled_charge_records_when_charging_actually_began():
 
     assert sessions[0]["start"] == T0.isoformat()
     assert sessions[0]["charging_start"] == (T0 + timedelta(minutes=241)).isoformat()
+    assert sessions[0]["charging_end"] == (T0 + timedelta(minutes=300)).isoformat()
+
+
+def test_charging_end_is_the_last_poll_still_charging_not_the_unplug():
+    sessions = feed(MODULE.ChargeTracker(), [
+        (0, True, False, False, 78, 0),
+        (25, True, False, True, 78, 8),
+        (60, True, False, True, 79, 8),
+        (61, True, False, False, 79, 0),
+        (90, True, False, True, 79, 8),
+        (94, True, False, True, 80, 8),
+        (95, True, False, False, 80, 0),
+        (1230, False, False, False, 80, 0),
+    ])
+
+    assert sessions[0]["charging_start"] == (T0 + timedelta(minutes=25)).isoformat()
+    assert sessions[0]["charging_end"] == (T0 + timedelta(minutes=94)).isoformat()
+    assert sessions[0]["end"] == (T0 + timedelta(minutes=95)).isoformat()
