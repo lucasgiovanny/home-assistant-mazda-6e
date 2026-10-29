@@ -42,6 +42,17 @@ class MazdaLoginError(Exception):
 class MazdaApiError(Exception):
     """Mazda rejected an authenticated API request."""
 
+    def __init__(self, message: str, code: str | None = None) -> None:
+        """Keep Mazda's response code so callers can tell retryable rejections apart."""
+        self.code = code
+        super().__init__(message)
+
+
+# The car is still running the previous command; it accepts a new one a few seconds later.
+CONTROL_BUSY_CODE = "TSP_VVCC_-1_-1_06_026"
+CONTROL_BUSY_ATTEMPTS = 5
+CONTROL_BUSY_DELAY = 4
+
 
 def now_ts():
     return str(int(time.time()))
@@ -103,7 +114,7 @@ class Mazda6EApi:
             return await self._request(url, headers, body, retry=False)
         code = raw.get("code") or f"HTTP {http_status}"
         message = raw.get("msg") or raw.get("message") or raw.get("error") or "unknown error"
-        raise MazdaApiError(f"Mazda API request rejected ({code}: {message})")
+        raise MazdaApiError(f"Mazda API request rejected ({code}: {message})", raw.get("code"))
 
     async def login_email_password(self, email_enc, password_enc):
         if not self.control_public_key:
@@ -718,21 +729,29 @@ class Mazda6EApi:
             raise ConfigEntryAuthFailed("Sign in again to register a control key")
 
         headers = {**HEADERS_BASE, "authorization": self.token, "deviceid": self.deviceid}
-        serial_response = await self._request(
-            f"{base_url(self.region)}/cma-app-car-control/api/serial-no/get", headers, {"type": "1"},
-        )
-        encrypted_serial = serial_response.get("data")
-        if not isinstance(encrypted_serial, str):
-            raise ValueError("Serial response omitted data")
+        for attempt in range(CONTROL_BUSY_ATTEMPTS):
+            serial_response = await self._request(
+                f"{base_url(self.region)}/cma-app-car-control/api/serial-no/get", headers, {"type": "1"},
+            )
+            encrypted_serial = serial_response.get("data")
+            if not isinstance(encrypted_serial, str):
+                raise ValueError("Serial response omitted data")
 
-        payload = {
-            **payload,
-            "seriralNo": decrypt_control_serial(encrypted_serial, self.control_private_key),
-            "vehicleId": str(vehicle_id),
-        }
-        submitted = await self._async_submit_signed_control(
-            headers, control_name, payload, sign_omit_keys=sign_omit_keys,
-        )
+            signed = {
+                **payload,
+                "seriralNo": decrypt_control_serial(encrypted_serial, self.control_private_key),
+                "vehicleId": str(vehicle_id),
+            }
+            try:
+                submitted = await self._async_submit_signed_control(
+                    headers, control_name, signed, sign_omit_keys=sign_omit_keys,
+                )
+                break
+            except MazdaApiError as err:
+                if err.code != CONTROL_BUSY_CODE or attempt == CONTROL_BUSY_ATTEMPTS - 1:
+                    raise
+                _LOGGER.debug("%s rejected while the car is busy, retrying", control_name)
+                await asyncio.sleep(CONTROL_BUSY_DELAY)
         submitted_data = submitted.get("data")
         if not isinstance(submitted_data, dict) or not isinstance(submitted_data.get("commandId"), str):
             raise ValueError(f"{control_name} response omitted commandId")

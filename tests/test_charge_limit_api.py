@@ -326,3 +326,42 @@ def test_battery_preheating_plan_is_selected_from_heating_plans(api_context):
     api_module = api_context[0]
     assert api_module.battery_preheating_plan([{"planId": 8, "planType": 1}]) is None
     assert api_module.battery_preheating_plan([{"planId": 7, "planType": 0}]) == {"planId": 7, "planType": 0}
+
+
+def test_busy_rejection_is_retried_with_a_fresh_serial(api_context, monkeypatch):
+    """A command rejected because the previous one is still running is sent again."""
+    api_module = api_context[0]
+    monkeypatch.setattr(api_module, "CONTROL_BUSY_DELAY", 0)
+    api, _, encrypted_serial = make_api(*api_context)
+    busy = api_module.MazdaApiError("busy", api_module.CONTROL_BUSY_CODE)
+    api._request = AsyncMock(side_effect=[
+        {"data": encrypted_serial},
+        busy,
+        {"data": encrypted_serial},
+        {"data": {"commandId": "command-id"}},
+        {"data": {"resultCode": 0}},
+    ])
+
+    result = asyncio.run(api.async_set_seat_mode(123, "heat", "master", True, 2))
+
+    assert result["resultCode"] == 0
+    paths = [call.args[0].rsplit("/", 2)[-2:] for call in api._request.await_args_list]
+    assert paths == [
+        ["serial-no", "get"], ["seats", "heat"], ["serial-no", "get"], ["seats", "heat"],
+        ["control", "control-result"],
+    ]
+
+
+def test_other_rejections_are_not_retried(api_context):
+    """Any other Mazda rejection fails straight away."""
+    api_module = api_context[0]
+    api, _, encrypted_serial = make_api(*api_context)
+    api._request = AsyncMock(side_effect=[
+        {"data": encrypted_serial},
+        api_module.MazdaApiError("nope", "TSP_OTHER"),
+    ])
+
+    with pytest.raises(api_module.MazdaApiError):
+        asyncio.run(api.async_set_seat_mode(123, "heat", "master", True, 2))
+
+    assert api._request.await_count == 2
