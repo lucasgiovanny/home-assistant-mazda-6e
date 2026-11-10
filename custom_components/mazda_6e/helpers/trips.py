@@ -10,6 +10,8 @@ PARKED = 2
 
 # A stop shorter than this (a red light, dropping someone off) belongs to the same trip.
 STOP_MERGE = timedelta(minutes=5)
+# Without signal (an underground garage) the cloud keeps reporting driving; a still odometer this long ends the trip.
+STILL_WHILE_DRIVING = timedelta(minutes=30)
 # Status flickers while parked report a few hundred metres at most.
 MIN_TRIP_KM = 0.3
 # Polls this far apart mean HA or the API was offline, so odometer movement in between is a missed trip.
@@ -100,13 +102,14 @@ class TripTracker:
         self.start: dict[str, Any] | None = state.get("start")
         self.stop: dict[str, Any] | None = state.get("stop")
         self.last: dict[str, Any] | None = state.get("last")
+        self.moved: dict[str, Any] | None = state.get("moved")
 
     def as_dict(self) -> dict[str, Any]:
-        return {"start": self.start, "stop": self.stop, "last": self.last}
+        return {"start": self.start, "stop": self.stop, "last": self.last, "moved": self.moved}
 
     def save_key(self) -> tuple:
         """What must reach storage; the last poll's time alone changes every minute and is not worth an SD write."""
-        return self.start, self.stop, self.last and self.last["odometer"]
+        return self.start, self.stop, self.last and self.last["odometer"], self.moved
 
     def update(
         self,
@@ -132,14 +135,25 @@ class TripTracker:
             if status == PARKED:
                 trip = build_trip(self.start, self.last, capacity_kwh)
                 self.start = None
+                self.moved = None
                 return trip
 
         if status == DRIVING:
+            self.stop = None
             # Remote climate also reports driving; the trip only begins once the odometer moves.
             if self.start is None or odometer <= self.start["odometer"]:
-                self.start = _snapshot(now, odometer, soc)
-            self.stop = None
-            return None
+                self.start = self.last
+                self.moved = None
+                return None
+            if self.moved is None or odometer > self.moved["odometer"]:
+                self.moved = self.last
+                return None
+            if now - datetime.fromisoformat(self.moved["time"]) < STILL_WHILE_DRIVING:
+                return None
+            trip = build_trip(self.start, self.moved, capacity_kwh)
+            self.start = self.last
+            self.moved = None
+            return trip
 
         if status != PARKED or self.start is None:
             return None
@@ -154,6 +168,7 @@ class TripTracker:
         trip = build_trip(self.start, self.stop, capacity_kwh)
         self.start = None
         self.stop = None
+        self.moved = None
         return trip
 
 

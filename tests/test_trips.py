@@ -58,6 +58,29 @@ def test_a_short_stop_belongs_to_the_same_trip():
     assert trips[0]["soc_used"] == 5
 
 
+def test_a_trip_ends_when_the_odometer_stops_while_the_cloud_still_says_driving():
+    polls = [(0, PARKED, 1938.4, 100), (1, DRIVING, 1938.4, 100)]
+    polls += [(2 + m, DRIVING, 1938.5 + m * 0.3, 99) for m in range(21)]
+    polls += [(23 + m, DRIVING, 1944.5, 97) for m in range(0, 600, 5)]
+    polls += [(623, DRIVING, 1944.8, 96), (650, DRIVING, 1996.0, 82), (651, PARKED, 1996.6, 82), (657, PARKED, 1996.6, 82)]
+
+    trips = feed(MODULE.TripTracker(), polls)
+
+    assert [trip["distance_km"] for trip in trips] == [6.1, 52.1]
+    assert trips[0]["end"] == (T0 + timedelta(minutes=22)).isoformat()
+    assert trips[0]["soc_used"] == 1
+    assert trips[1]["start"] == (T0 + timedelta(minutes=618)).isoformat()
+
+
+def test_a_still_odometer_survives_a_restart():
+    tracker = MODULE.TripTracker()
+    feed(tracker, [(0, DRIVING, 100.0, 50), (1, DRIVING, 105.0, 49), (2, DRIVING, 105.0, 49)])
+
+    trips = feed(MODULE.TripTracker(tracker.as_dict()), [(31, DRIVING, 105.0, 49)])
+
+    assert [trip["distance_km"] for trip in trips] == [5.0]
+
+
 def test_remote_climate_before_leaving_is_not_part_of_the_trip():
     trips = feed(MODULE.TripTracker(), [
         (0, DRIVING, 300.0, 50),
