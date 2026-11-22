@@ -12,6 +12,8 @@ PARKED = 2
 STOP_MERGE = timedelta(minutes=5)
 # Without signal (an underground garage) the cloud keeps reporting driving; a still odometer this long ends the trip.
 STILL_WHILE_DRIVING = timedelta(minutes=30)
+# Odometer gained this fast across that still stretch means the cloud froze mid-drive, so the split trip resumes.
+CONTINUOUS_KMH = 40
 # Status flickers while parked report a few hundred metres at most.
 MIN_TRIP_KM = 0.3
 # Polls this far apart mean HA or the API was offline, so odometer movement in between is a missed trip.
@@ -103,13 +105,15 @@ class TripTracker:
         self.stop: dict[str, Any] | None = state.get("stop")
         self.last: dict[str, Any] | None = state.get("last")
         self.moved: dict[str, Any] | None = state.get("moved")
+        # The trip ended by a still odometer while driving, kept until the odometer shows whether it really stopped.
+        self.split: dict[str, Any] | None = state.get("split")
 
     def as_dict(self) -> dict[str, Any]:
-        return {"start": self.start, "stop": self.stop, "last": self.last, "moved": self.moved}
+        return {"start": self.start, "stop": self.stop, "last": self.last, "moved": self.moved, "split": self.split}
 
     def save_key(self) -> tuple:
         """What must reach storage; the last poll's time alone changes every minute and is not worth an SD write."""
-        return self.start, self.stop, self.last and self.last["odometer"], self.moved
+        return self.start, self.stop, self.last and self.last["odometer"], self.moved, self.split
 
     def update(
         self,
@@ -124,6 +128,8 @@ class TripTracker:
             return None
 
         last, self.last = self.last, _snapshot(now, odometer, soc)
+        if self.split and odometer > self.split["moved"]["odometer"]:
+            self._resume_split(now, odometer)
         missed = (
             self.start is None
             and last is not None
@@ -151,6 +157,7 @@ class TripTracker:
             if now - datetime.fromisoformat(self.moved["time"]) < STILL_WHILE_DRIVING:
                 return None
             trip = build_trip(self.start, self.moved, capacity_kwh)
+            self.split = {"start": self.start, "moved": self.moved}
             self.start = self.last
             self.moved = None
             return trip
@@ -169,7 +176,17 @@ class TripTracker:
         self.start = None
         self.stop = None
         self.moved = None
+        self.split = None
         return trip
+
+    def _resume_split(self, now: datetime, odometer: float) -> None:
+        """Rejoin the split trip when the distance covered since it went still could only have been driven."""
+        moved = self.split["moved"]
+        hours = (now - datetime.fromisoformat(moved["time"])).total_seconds() / 3600
+        if hours > 0 and (odometer - moved["odometer"]) / hours >= CONTINUOUS_KMH:
+            self.start = self.split["start"]
+            self.moved = None
+        self.split = None
 
 
 def month_totals(trips: list[dict[str, Any]], now: datetime) -> dict[str, Any]:

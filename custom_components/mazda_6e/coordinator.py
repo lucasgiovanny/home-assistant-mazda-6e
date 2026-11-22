@@ -82,7 +82,9 @@ class Mazda6eCoordinator(DataUpdateCoordinator):
         trip = tracker.update(vehicle_status.get("status"), odometer, soc, dt_util.now(), self._capacity())
 
         if trip:
-            self.trips[key] = estimate_short_trips([trip, *self.trips.get(key, [])][:MAX_TRIPS], self._capacity())
+            # A rejoined trip keeps the start of the part already logged, which it replaces.
+            earlier = [logged for logged in self.trips.get(key, []) if logged["start"] != trip["start"]]
+            self.trips[key] = estimate_short_trips([trip, *earlier][:MAX_TRIPS], self._capacity())
             trip = self.trips[key][0]
             self.hass.bus.async_fire(EVENT_TRIP, {"vehicle_id": vehicle_id, **trip})
             _LOGGER.info("Vehicle %s finished a %s km trip", vehicle_id, trip["distance_km"])

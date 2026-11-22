@@ -72,6 +72,21 @@ def test_a_trip_ends_when_the_odometer_stops_while_the_cloud_still_says_driving(
     assert trips[1]["start"] == (T0 + timedelta(minutes=618)).isoformat()
 
 
+def test_a_cloud_freeze_mid_drive_rejoins_the_split_trip():
+    polls = [(0, DRIVING, 2497.1, 54), (1, DRIVING, 2497.4, 53), (2, DRIVING, 2497.6, 53)]
+    polls += [(m, DRIVING, 2497.6, 53) for m in range(3, 36)]
+    polls += [(36 + m, DRIVING, 2549.6 + m * 1.3, 42 - m * 0.3) for m in range(26)]
+    polls += [(62, PARKED, 2585.0, 35), (68, PARKED, 2585.0, 35)]
+
+    tracker = MODULE.TripTracker()
+    trips = feed(tracker, polls[:40])
+    trips += feed(MODULE.TripTracker(tracker.as_dict()), polls[40:])
+
+    assert [trip["distance_km"] for trip in trips] == [0.5, 87.9]
+    assert trips[1]["start"] == trips[0]["start"] == T0.isoformat()
+    assert trips[1]["duration_min"] == 62
+
+
 def test_a_still_odometer_survives_a_restart():
     tracker = MODULE.TripTracker()
     feed(tracker, [(0, DRIVING, 100.0, 50), (1, DRIVING, 105.0, 49), (2, DRIVING, 105.0, 49)])
