@@ -174,6 +174,46 @@ def test_a_departure_between_two_polls_is_not_recovered():
     assert len(trips) == 1 and "recovered" not in trips[0]
 
 
+def test_a_departure_between_two_polls_counts_from_the_parked_reading():
+    trips = feed(MODULE.TripTracker(), [
+        (0, PARKED, 800.0, 60),
+        (1, DRIVING, 801.0, 60),
+        (20, PARKED, 815.0, 57),
+        (26, PARKED, 815.0, 57),
+    ])
+
+    assert [(trip["distance_km"], trip["duration_min"]) for trip in trips] == [(15.0, 20)]
+
+
+def test_a_cloud_freeze_at_the_start_keeps_the_distance_driven_before_it_thawed():
+    trips = feed(MODULE.TripTracker(), [
+        (0, PARKED, 2956.7, 58),
+        (1, PARKED, 2956.7, 58),
+        (2, DRIVING, 2970.5, 53),
+        (5, DRIVING, 2970.5, 53),
+        (6, DRIVING, 2978.1, 50),
+        (26, PARKED, 3013.8, 41),
+        (32, PARKED, 3013.8, 41),
+    ])
+
+    assert len(trips) == 1
+    trip = trips[0]
+    assert trip["recovered"] is True
+    assert trip["distance_km"] == 57.1
+    assert trip["soc_used"] == 17
+    assert trip["duration_min"] is None
+
+
+def test_a_drive_the_cloud_only_reports_once_parked_is_recovered():
+    trips = feed(MODULE.TripTracker(), [
+        (0, PARKED, 500.0, 70),
+        (1, PARKED, 500.0, 70),
+        (2, PARKED, 520.0, 65),
+    ])
+
+    assert [(trip["distance_km"], trip["recovered"]) for trip in trips] == [(20.0, True)]
+
+
 def test_a_parked_restart_saves_nothing_new():
     tracker = MODULE.TripTracker()
     feed(tracker, [(0, PARKED, 500.0, 70)])

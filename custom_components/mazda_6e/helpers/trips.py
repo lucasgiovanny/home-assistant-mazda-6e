@@ -18,6 +18,8 @@ CONTINUOUS_KMH = 40
 MIN_TRIP_KM = 0.3
 # Polls this far apart mean HA or the API was offline, so odometer movement in between is a missed trip.
 OFFLINE_GAP = timedelta(minutes=15)
+# Odometer gained faster than this between two polls was driven earlier: the cloud froze and delivered it late.
+FASTEST_KMH = 250
 MAX_TRIPS = 100
 DEFAULT_BATTERY_CAPACITY_KWH = 68.8
 # The API reports whole percent, so under 2% used is mostly rounding and is estimated from longer trips.
@@ -96,6 +98,15 @@ def estimate_short_trips(trips: list[dict[str, Any]], capacity_kwh: float) -> li
     return estimated
 
 
+def _unseen(last: dict[str, Any], odometer: float, now: datetime) -> bool:
+    """Whether the distance since the last poll was driven without the tracker seeing it."""
+    gained = odometer - last["odometer"]
+    if gained < MIN_TRIP_KM:
+        return False
+    gap = now - datetime.fromisoformat(last["time"])
+    return gap >= OFFLINE_GAP or gained > FASTEST_KMH * gap.total_seconds() / 3600
+
+
 class TripTracker:
     """Follows driving and parked transitions and hands back each finished trip."""
 
@@ -130,19 +141,17 @@ class TripTracker:
         last, self.last = self.last, _snapshot(now, odometer, soc)
         if self.split and odometer > self.split["moved"]["odometer"]:
             self._resume_split(now, odometer)
-        missed = (
-            self.start is None
-            and last is not None
-            and odometer - last["odometer"] >= MIN_TRIP_KM
-            and now - datetime.fromisoformat(last["time"]) >= OFFLINE_GAP
-        )
-        if missed:
-            self.start = {**last, "recovered": True}
-            if status == PARKED:
-                trip = build_trip(self.start, self.last, capacity_kwh)
-                self.start = None
-                self.moved = None
-                return trip
+        if self.start is None and last is not None and odometer > last["odometer"]:
+            if _unseen(last, odometer, now):
+                self.start = {**last, "recovered": True}
+                if status == PARKED:
+                    trip = build_trip(self.start, self.last, capacity_kwh)
+                    self.start = None
+                    self.moved = None
+                    return trip
+            elif status == DRIVING:
+                # The car left between two polls, so the trip starts at the parked reading.
+                self.start = last
 
         if status == DRIVING:
             self.stop = None
